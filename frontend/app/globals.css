@@ -1,0 +1,77 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #0a0e14;
+  color: #c8d6e5;
+  min-height: 100vh;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+  color: #7fdbca;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #5c7a8a;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: #111820;
+  border: 1px solid #1e2a36;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.card h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #5c7a8a;
+  margin-bottom: 0.75rem;
+}
+
+.status-ok {
+  color: #98c379;
+}
+
+.status-error {
+  color: #e06c75;
+}
+
+.status-pending {
+  color: #e5c07b;
+}
+
+.detail {
+  font-family: monospace;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.services {
+  list-style: none;
+}
+
+.services li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #1e2a36;
+  font-size: 0.9rem;
+}
+
+.services li:last-child {
+  border-bottom: none;
+}

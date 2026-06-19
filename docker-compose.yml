@@ -1,0 +1,229 @@
+x-common-env: &common-env
+  POSTGRES_DB: ${POSTGRES_DB:-helios}
+  POSTGRES_USER: ${POSTGRES_USER:-helios}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://helios:changeme@postgres:5432/helios}
+  DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql://helios:changeme@postgres:5432/helios}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  TRITON_URL: ${TRITON_URL:-triton:8000}
+  JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+  COPERNICUS_CLIENT_ID: ${COPERNICUS_CLIENT_ID:-}
+  COPERNICUS_CLIENT_SECRET: ${COPERNICUS_CLIENT_SECRET:-}
+  COPERNICUS_TOKEN_URL: ${COPERNICUS_TOKEN_URL:-https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token}
+  COPERNICUS_STAC_URL: ${COPERNICUS_STAC_URL:-https://catalogue.dataspace.copernicus.eu/stac/search}
+  COPERNICUS_S3_CREDENTIALS_URL: ${COPERNICUS_S3_CREDENTIALS_URL:-https://eodata.dataspace.copernicus.eu/s3-credentials}
+  COPERNICUS_S3_ENDPOINT: ${COPERNICUS_S3_ENDPOINT:-https://eodata.dataspace.copernicus.eu}
+  PLANET_API_KEY: ${PLANET_API_KEY:-}
+  PLANET_API_BASE: ${PLANET_API_BASE:-https://api.planet.com}
+  DATA_ROOT: ${DATA_ROOT:-/data}
+  TILES_DIR: ${TILES_DIR:-/tiles}
+  DEM_PATH: ${DEM_PATH:-/data/dem/srtm_30m.tif}
+  MAX_CLOUD_COVER: ${MAX_CLOUD_COVER:-0.30}
+  TILE_SIZE: ${TILE_SIZE:-640}
+  TILE_OVERLAP: ${TILE_OVERLAP:-0.20}
+  YOLO_CONFIDENCE_MIN: ${YOLO_CONFIDENCE_MIN:-0.25}
+  NMS_IOU_THRESHOLD: ${NMS_IOU_THRESHOLD:-0.45}
+  MSTAR_CONFIDENCE_MIN: ${MSTAR_CONFIDENCE_MIN:-0.50}
+  BIT_CHANGE_THRESHOLD: ${BIT_CHANGE_THRESHOLD:-0.50}
+  DETECTIONS_DIR: ${DETECTIONS_DIR:-/data/detections}
+  YOLO_WEIGHTS_PATH: ${YOLO_WEIGHTS_PATH:-/ml/artifacts/yolo/best.pt}
+  TRITON_YOLO_MODEL: ${TRITON_YOLO_MODEL:-yolov8_detection}
+  TRITON_MSTAR_MODEL: ${TRITON_MSTAR_MODEL:-mstar_sar}
+  TRITON_BIT_MODEL: ${TRITON_BIT_MODEL:-bit_change}
+  KAGGLE_USERNAME: ${KAGGLE_USERNAME:-}
+  KAGGLE_KEY: ${KAGGLE_KEY:-}
+  ML_DATA_DIR: ${ML_DATA_DIR:-./ml/datasets}
+  YOLO_MODEL_SIZE: ${YOLO_MODEL_SIZE:-s}
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: helios-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-helios}
+      POSTGRES_USER: ${POSTGRES_USER:-helios}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/001_init_postgis.sql:/docker-entrypoint-initdb.d/001_init_postgis.sql:ro
+      - ./migrations/002_scenes_external_id.sql:/docker-entrypoint-initdb.d/002_scenes_external_id.sql:ro
+      - ./migrations/003_detection_gradcam.sql:/docker-entrypoint-initdb.d/003_detection_gradcam.sql:ro
+    ports:
+      - "5433:5432"
+    networks:
+      - helios
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helios} -d ${POSTGRES_DB:-helios}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: helios-redis
+    networks:
+      - helios
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  triton:
+    image: nvcr.io/nvidia/tritonserver:23.10-py3
+    container_name: helios-triton
+    command: tritonserver --model-repository=/models --strict-model-config=false
+    volumes:
+      - ./models:/models
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+    networks:
+      - helios
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/v2/health/ready')\"",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  scene-watcher:
+    build:
+      context: .
+      dockerfile: services/scene-watcher/Dockerfile
+    container_name: helios-scene-watcher
+    environment:
+      <<: *common-env
+    volumes:
+      - ./data:/data
+      - ./tiles:/tiles
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - helios
+
+  preprocessor:
+    build:
+      context: .
+      dockerfile: services/preprocessor/Dockerfile
+    container_name: helios-preprocessor
+    environment:
+      <<: *common-env
+    volumes:
+      - ./data:/data
+      - ./tiles:/tiles
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - helios
+
+  inference-service:
+    build:
+      context: .
+      dockerfile: services/inference-service/Dockerfile
+    container_name: helios-inference-service
+    environment:
+      <<: *common-env
+    volumes:
+      - ./data:/data
+      - ./tiles:/tiles
+      - ./ml/artifacts:/ml/artifacts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      triton:
+        condition: service_healthy
+    networks:
+      - helios
+
+  change-detection:
+    build:
+      context: .
+      dockerfile: services/change-detection/Dockerfile
+    container_name: helios-change-detection
+    environment:
+      <<: *common-env
+    volumes:
+      - ./tiles:/tiles
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - helios
+
+  alert-service:
+    build:
+      context: .
+      dockerfile: services/alert-service/Dockerfile
+    container_name: helios-alert-service
+    environment:
+      <<: *common-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - helios
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: helios-fastapi
+    environment:
+      <<: *common-env
+    volumes:
+      - ./data:/data
+    ports:
+      - "8080:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - helios
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    container_name: helios-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    networks:
+      - helios
+
+networks:
+  helios:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,0 +1,11 @@
+celery[redis]==5.4.0
+redis==5.2.1
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+geoalchemy2==0.16.0
+pydantic-settings==2.6.1
+boto3==1.35.68
+httpx==0.28.1
+shapely==2.0.6
+python-dateutil==2.9.0.post0

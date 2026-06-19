@@ -1,0 +1,10 @@
+path: ../datasets/dota
+train: train/images
+val: val/images
+test: test/images
+nc: 4
+names:
+  0: vehicle
+  1: ship
+  2: aircraft
+  3: helicopter
