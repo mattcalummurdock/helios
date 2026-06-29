@@ -117,13 +117,21 @@ export async function getScenes(aoiId?: number): Promise<{ scenes: Scene[] }> {
   return apiFetch(`/scenes${queryString({ aoi_id: aoiId })}`);
 }
 
-export async function fetchGradCamBlob(detectionId: number): Promise<Blob | null> {
+export async function fetchDetectionImageBlob(
+  detectionId: number,
+  kind: "gradcam" | "crop" = "gradcam"
+): Promise<Blob | null> {
   await ensureAuth();
-  const res = await fetch(`${getApiUrl()}/detections/${detectionId}/gradcam`, {
+  const res = await fetch(`${getApiUrl()}/detections/${detectionId}/${kind}`, {
     headers: authHeaders(),
   });
   if (!res.ok) return null;
   return res.blob();
+}
+
+/** @deprecated use fetchDetectionImageBlob */
+export async function fetchGradCamBlob(detectionId: number): Promise<Blob | null> {
+  return fetchDetectionImageBlob(detectionId, "gradcam");
 }
 
 export async function exportDetections(params: ExportQuery): Promise<Blob> {

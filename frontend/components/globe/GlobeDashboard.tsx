@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCesium, type CesiumNamespace } from "@/lib/cesium-loader";
 import { getAois, getChanges, getDetections, getScenes } from "@/lib/api";
+import { detectionModelLabel } from "@/lib/detection-display";
 import { HeliosWebSocket } from "@/lib/ws";
-import { iconForClass, scaleForConfidence, CHANGE_COLORS } from "@/lib/icons";
+import { iconForClass, scaleForConfidence, CHANGE_COLORS, aoiStyle } from "@/lib/icons";
 import type {
   Alert,
   AoiFeature,
@@ -47,10 +48,52 @@ function aoiCentroid(coords: number[][][]) {
   return { lon: lon / n, lat: lat / n };
 }
 
+function changeBounds(events: ChangeEvent[]) {
+  let west = Infinity,
+    east = -Infinity,
+    south = Infinity,
+    north = -Infinity;
+  events.forEach((ch) => {
+    [ch.t1, ch.t2].forEach((pt) => {
+      if (!pt) return;
+      west = Math.min(west, pt.lon);
+      east = Math.max(east, pt.lon);
+      south = Math.min(south, pt.lat);
+      north = Math.max(north, pt.lat);
+    });
+  });
+  if (!Number.isFinite(west)) return null;
+  return { west, east, south, north };
+}
+
+function flyToChangeEvents(
+  viewer: any,
+  Cesium: CesiumNamespace,
+  events: ChangeEvent[]
+) {
+  const bounds = changeBounds(events);
+  if (!bounds) return;
+  const centerLon = (bounds.west + bounds.east) / 2;
+  const centerLat = (bounds.south + bounds.north) / 2;
+  const spanDeg = Math.max(bounds.east - bounds.west, bounds.north - bounds.south, 0.01);
+  // Close enough to see movement arrows (km-scale), not continent view
+  const altitudeM = Math.min(Math.max(spanDeg * 111000 * 4, 12000), 120000);
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, altitudeM),
+    duration: 1.2,
+  });
+}
+
 function coverageColor(Cesium: CesiumNamespace, hoursAgo: number) {
-  if (hoursAgo < 6) return Cesium.Color.fromCssColorString("#98c379").withAlpha(0.35);
-  if (hoursAgo < 48) return Cesium.Color.fromCssColorString("#e5c07b").withAlpha(0.35);
-  return Cesium.Color.fromCssColorString("#e06c75").withAlpha(0.35);
+  if (hoursAgo < 6) return Cesium.Color.fromCssColorString("#98c379").withAlpha(0.55);
+  if (hoursAgo < 48) return Cesium.Color.fromCssColorString("#e5c07b").withAlpha(0.55);
+  return Cesium.Color.fromCssColorString("#e06c75").withAlpha(0.55);
+}
+
+function coverageOutlineColor(Cesium: CesiumNamespace, hoursAgo: number) {
+  if (hoursAgo < 6) return Cesium.Color.fromCssColorString("#b8e986");
+  if (hoursAgo < 48) return Cesium.Color.fromCssColorString("#ffd866");
+  return Cesium.Color.fromCssColorString("#ff6b6b");
 }
 
 export default function GlobeDashboard() {
@@ -77,9 +120,13 @@ export default function GlobeDashboard() {
   const [showChanges, setShowChanges] = useState(true);
   const [showCoverage, setShowCoverage] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [alertCount, setAlertCount] = useState(0);
   const [newAlerts, setNewAlerts] = useState<Alert[]>([]);
   const [flyTarget, setFlyTarget] = useState<{ lon: number; lat: number } | null>(null);
   const initialFlyDone = useRef(false);
+  const dismissAlertsRef = useRef<() => void>(() => {});
+  dismissAlertsRef.current = () => setAlertsOpen(false);
 
   const pulseAlpha = pulseOn ? 0.9 : 0.3;
 
@@ -100,6 +147,7 @@ export default function GlobeDashboard() {
           baseLayerPicker: false,
           geocoder: false,
           homeButton: true,
+          infoBox: false,
           navigationHelpButton: false,
           sceneModePicker: false,
           terrain: Cesium.Terrain.fromWorldTerrain(),
@@ -109,10 +157,24 @@ export default function GlobeDashboard() {
         const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
         handler.setInputAction((movement: { position: { x: number; y: number } }) => {
           const picked = viewer.scene.pick(movement.position);
-          if (!Cesium.defined(picked) || !picked.id) return;
+          if (!Cesium.defined(picked) || !picked.id) {
+            viewer.selectedEntity = undefined;
+            setSelectedDetection(null);
+            setSelectedChange(null);
+            return;
+          }
           const id = picked.id.id as string;
-          const data = entityMapRef.current.get(id);
-          if (!data) return;
+          let data = entityMapRef.current.get(id);
+          if (!data && id.startsWith("ch-")) {
+            const baseId = id.replace(/-(t1|t2)$/, "");
+            data = entityMapRef.current.get(baseId);
+          }
+          if (!data) {
+            viewer.selectedEntity = undefined;
+            return;
+          }
+          dismissAlertsRef.current();
+          viewer.selectedEntity = picked.id;
           if ("properties" in data) {
             setSelectedDetection(data as DetectionFeature);
             setSelectedChange(null);
@@ -257,7 +319,6 @@ export default function GlobeDashboard() {
       aois.forEach((aoi) => {
         const props = aoi.properties;
         const isProcessing = processingAois.has(props.aoi_id);
-        const outlineAlpha = isProcessing ? pulseAlpha : 0.85;
         const scene = scenesByAoi.get(props.aoi_id);
         const tooltip = [
           props.name,
@@ -278,15 +339,49 @@ export default function GlobeDashboard() {
         const positions = aoi.geometry.coordinates[0].map(([lon, lat]) =>
           Cesium.Cartesian3.fromDegrees(lon, lat)
         );
+        const style = aoiStyle(props.priority);
+        const fill = Cesium.Color.fromCssColorString(style.fill).withAlpha(0.42);
+        const stroke = Cesium.Color.fromCssColorString(style.stroke);
+        const centroid = aoiCentroid(aoi.geometry.coordinates);
 
         viewer.entities.add({
+          id: `aoi-${props.aoi_id}`,
           name: tooltip,
           polygon: {
             hierarchy: positions,
-            material: Cesium.Color.fromCssColorString("#61afef").withAlpha(0.12),
-            outline: true,
-            outlineColor: Cesium.Color.fromCssColorString("#61afef").withAlpha(outlineAlpha),
-            outlineWidth: isProcessing ? 4 : 2,
+            material: fill,
+            outline: false,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+        });
+
+        const closed = [...positions, positions[0]];
+        viewer.entities.add({
+          id: `aoi-border-${props.aoi_id}`,
+          polyline: {
+            positions: closed,
+            width: isProcessing ? 5 : 4,
+            clampToGround: true,
+            material: stroke,
+            depthFailMaterial: stroke.withAlpha(0.85),
+          },
+        });
+
+        viewer.entities.add({
+          id: `aoi-label-${props.aoi_id}`,
+          position: Cesium.Cartesian3.fromDegrees(centroid.lon, centroid.lat, 0),
+          label: {
+            text: props.name,
+            font: "bold 13px sans-serif",
+            fillColor: Cesium.Color.fromCssColorString(style.label),
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            verticalOrigin: Cesium.VerticalOrigin.CENTER,
+            horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            scaleByDistance: new Cesium.NearFarScalar(5000, 1.2, 8_000_000, 0.55),
+            pixelOffsetScaleByDistance: new Cesium.NearFarScalar(5000, 1, 8_000_000, 0.4),
           },
         });
       });
@@ -310,6 +405,7 @@ export default function GlobeDashboard() {
           .join("\n");
 
         viewer.entities.add({
+          id: `coverage-${aoi.properties.aoi_id}`,
           name: tooltip,
           rectangle: {
             coordinates: Cesium.Rectangle.fromDegrees(
@@ -319,6 +415,10 @@ export default function GlobeDashboard() {
               bbox.north
             ),
             material: coverageColor(Cesium, hoursAgo),
+            outline: true,
+            outlineColor: coverageOutlineColor(Cesium, hoursAgo),
+            outlineWidth: 3,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           },
         });
       });
@@ -326,25 +426,63 @@ export default function GlobeDashboard() {
 
     if (showChanges) {
       changes.forEach((ch) => {
-        if (!ch.t1 || !ch.t2) return;
         const color = CHANGE_COLORS[ch.event_type] || "#e5c07b";
-        const width = Math.min(Math.max((ch.speed_kmh || 10) / 20, 2), 8);
+        const cesiumColor = Cesium.Color.fromCssColorString(color);
         const id = `ch-${ch.id}`;
+
+        if (ch.t1 && ch.t2) {
+          entityMapRef.current.set(id, ch);
+          viewer.entities.add({
+            id,
+            name: `${ch.event_type} — ${ch.t2.class}`,
+            polyline: {
+              positions: Cesium.Cartesian3.fromDegreesArray([
+                ch.t1.lon,
+                ch.t1.lat,
+                ch.t2.lon,
+                ch.t2.lat,
+              ]),
+              width: 14,
+              clampToGround: true,
+              arcType: Cesium.ArcType.GEODESIC,
+              material: new Cesium.PolylineArrowMaterialProperty(cesiumColor),
+              depthFailMaterial: new Cesium.PolylineArrowMaterialProperty(cesiumColor),
+            },
+          });
+          ["t1", "t2"].forEach((end, idx) => {
+            const pt = end === "t1" ? ch.t1! : ch.t2!;
+            const endId = `${id}-${end}`;
+            entityMapRef.current.set(endId, ch);
+            viewer.entities.add({
+              id: endId,
+              position: Cesium.Cartesian3.fromDegrees(pt.lon, pt.lat, 0),
+              point: {
+                pixelSize: idx === 0 ? 10 : 14,
+                color: cesiumColor,
+                outlineColor: Cesium.Color.WHITE,
+                outlineWidth: 2,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+              },
+            });
+          });
+          return;
+        }
+
+        const pt = ch.t2 ?? ch.t1;
+        if (!pt) return;
         entityMapRef.current.set(id, ch);
         viewer.entities.add({
           id,
-          name: `${ch.event_type} — ${ch.t2.class}`,
-          polyline: {
-            positions: Cesium.Cartesian3.fromDegreesArray([
-              ch.t1.lon,
-              ch.t1.lat,
-              ch.t2.lon,
-              ch.t2.lat,
-            ]),
-            width,
-            material: new Cesium.PolylineArrowMaterialProperty(
-              Cesium.Color.fromCssColorString(color)
-            ),
+          position: Cesium.Cartesian3.fromDegrees(pt.lon, pt.lat, 0),
+          name: `${ch.event_type} — ${pt.class}`,
+          point: {
+            pixelSize: 16,
+            color: cesiumColor,
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 2,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           },
         });
       });
@@ -355,10 +493,11 @@ export default function GlobeDashboard() {
         const p = det.properties;
         const id = `det-${p.detection_id}`;
         entityMapRef.current.set(id, det);
+        const label = detectionModelLabel(p.class, p.subclass) ?? p.class;
         viewer.entities.add({
           id,
           position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0),
-          name: `${p.class} (${(p.confidence * 100).toFixed(0)}%)`,
+          name: `${label} (${(p.confidence * 100).toFixed(0)}%)`,
           billboard: {
             image: iconForClass(p.class),
             scale: scaleForConfidence(p.confidence),
@@ -375,12 +514,39 @@ export default function GlobeDashboard() {
     changes,
     scenesByAoi,
     processingAois,
-    pulseAlpha,
     showAois,
     showDetections,
     showChanges,
     showCoverage,
   ]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !cesiumReady) return;
+    if (selectedDetection) {
+      const ent = viewer.entities.getById(
+        `det-${selectedDetection.properties.detection_id}`
+      );
+      viewer.selectedEntity = ent ?? undefined;
+    } else if (selectedChange) {
+      const ent = viewer.entities.getById(`ch-${selectedChange.id}`);
+      viewer.selectedEntity = ent ?? undefined;
+    } else {
+      viewer.selectedEntity = undefined;
+    }
+  }, [cesiumReady, selectedDetection, selectedChange, detections, changes, showDetections, showChanges]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const Cesium = cesiumRef.current;
+    if (!viewer || !Cesium) return;
+    processingAois.forEach((aoiId) => {
+      const border = viewer.entities.getById(`aoi-border-${aoiId}`);
+      if (border?.polyline) {
+        border.polyline.width = pulseAlpha > 0.6 ? 6 : 4;
+      }
+    });
+  }, [pulseAlpha, processingAois]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -398,11 +564,42 @@ export default function GlobeDashboard() {
     refreshDetections().catch(console.error);
   };
 
-  const handleFlyTo = (lat: number, lon: number) => {
-    setFlyTarget({ lat, lon });
+  const handleToggleVectors = () => {
+    setShowChanges((prev) => {
+      const next = !prev;
+      if (next && changes.length > 0 && viewerRef.current && cesiumRef.current) {
+        flyToChangeEvents(viewerRef.current, cesiumRef.current, changes);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleAlerts = useCallback(() => {
+    setAlertsOpen((open) => {
+      if (!open) {
+        setSelectedDetection(null);
+        setSelectedChange(null);
+        const viewer = viewerRef.current;
+        if (viewer) viewer.selectedEntity = undefined;
+      }
+      return !open;
+    });
+  }, []);
+  const handleFlyTo = useCallback((lat: number, lon: number) => {
+    const viewer = viewerRef.current;
+    const Cesium = cesiumRef.current;
+    setAlertsOpen(false);
     setSelectedDetection(null);
     setSelectedChange(null);
-  };
+    if (viewer && Cesium) {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, 18000),
+        duration: 1.2,
+      });
+      return;
+    }
+    setFlyTarget({ lon, lat });
+  }, []);
 
   if (!ION_TOKEN) {
     return (
@@ -418,34 +615,51 @@ export default function GlobeDashboard() {
 
   return (
     <div className="globe-container">
-      <div className="globe-toolbar">
-        <button
-          className={`toolbar-btn ${showDetections ? "active" : ""}`}
-          onClick={() => setShowDetections((v) => !v)}
-        >
-          Detections
-        </button>
-        <button
-          className={`toolbar-btn ${showAois ? "active" : ""}`}
-          onClick={() => setShowAois((v) => !v)}
-        >
-          AOIs
-        </button>
-        <button
-          className={`toolbar-btn ${showChanges ? "active" : ""}`}
-          onClick={() => setShowChanges((v) => !v)}
-        >
-          Vectors
-        </button>
-        <button
-          className={`toolbar-btn ${showCoverage ? "active" : ""}`}
-          onClick={() => setShowCoverage((v) => !v)}
-        >
-          Coverage
-        </button>
-        <button className="toolbar-btn" onClick={() => setExportOpen(true)}>
-          Export
-        </button>
+      <div className="globe-toolbar-row">
+        <div className="globe-toolbar">
+          <button
+            className={`toolbar-btn ${showDetections ? "active" : ""}`}
+            onClick={() => setShowDetections((v) => !v)}
+          >
+            Detections
+          </button>
+          <button
+            className={`toolbar-btn ${showAois ? "active" : ""}`}
+            onClick={() => setShowAois((v) => !v)}
+          >
+            AOIs
+          </button>
+          <button
+            className={`toolbar-btn ${showChanges ? "active" : ""}`}
+            onClick={handleToggleVectors}
+            title={
+              changes.length === 0
+                ? "No change vectors yet (needs T1/T2 pass comparison)"
+                : `${changes.length} movement vector(s) — click to fly to them`
+            }
+          >
+            Vectors{changes.length > 0 ? ` (${changes.length})` : ""}
+          </button>
+          <button
+            className={`toolbar-btn ${showCoverage ? "active" : ""}`}
+            onClick={() => setShowCoverage((v) => !v)}
+          >
+            Coverage
+          </button>
+          <button className="toolbar-btn" onClick={() => setExportOpen(true)}>
+            Export
+          </button>
+        </div>
+        <div className="globe-toolbar-right">
+          <button
+            className={`toolbar-btn toolbar-btn-alert ${alertsOpen ? "active" : ""}`}
+            onClick={handleToggleAlerts}
+            aria-label="Alerts"
+          >
+            Alerts
+            {alertCount > 0 && <span className="alert-badge">{alertCount}</span>}
+          </button>
+        </div>
       </div>
 
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
@@ -456,9 +670,11 @@ export default function GlobeDashboard() {
         </div>
       )}
 
-      <DetectionPanel detection={selectedDetection} onClose={() => setSelectedDetection(null)} />
+      {!alertsOpen && (
+        <DetectionPanel detection={selectedDetection} onClose={() => setSelectedDetection(null)} />
+      )}
 
-      {selectedChange && (
+      {!alertsOpen && selectedChange && (
         <div className="panel change-detail-panel">
           <button className="panel-close" onClick={() => setSelectedChange(null)}>
             ×
@@ -497,7 +713,14 @@ export default function GlobeDashboard() {
         </div>
       )}
 
-      <AlertPanel aois={aois} onFlyTo={handleFlyTo} externalAlerts={newAlerts} />
+      <AlertPanel
+        open={alertsOpen}
+        onClose={() => setAlertsOpen(false)}
+        aois={aois}
+        onFlyTo={handleFlyTo}
+        onCountChange={setAlertCount}
+        externalAlerts={newAlerts}
+      />
 
       <TimelineScrubber
         detections={allDetections}

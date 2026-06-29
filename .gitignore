@@ -1,44 +1,104 @@
-# Secrets and local env
+# =============================================================================
+# Secrets & local environment
+# =============================================================================
 .env
 .env.local
 .env.*.local
+!.env.example
+!frontend/.env.example
 
+# =============================================================================
 # Python
-*.pyc
+# =============================================================================
 __pycache__/
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
+*.egg
 *.egg-info/
+.eggs/
 dist/
 build/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
 .venv/
-.venv-train/
+.venv-*/
 venv/
+ENV/
+
+# Test / type / lint caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
+.coverage.*
 htmlcov/
+.tox/
+.nox/
+hypothesis/
 
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# =============================================================================
 # Node / frontend
+# =============================================================================
 node_modules/
 .next/
 out/
+.turbo/
+*.tsbuildinfo
 
+# =============================================================================
+# Runtime data & large/generated assets (not source)
+# =============================================================================
+data/
+tiles/
+datasets/
+ml/datasets/
+ml/datasets.zip
+
+# Demo imagery copied from DOTA/MSTAR by pick_demo_images.py --apply
+ml/demo_assets/*
+!ml/demo_assets/.gitkeep
+
+# =============================================================================
+# Local dev logs & scratch
+# =============================================================================
+*.log
+!ml/artifacts/**/*.log
+
+# =============================================================================
 # OS
+# =============================================================================
 .DS_Store
 Thumbs.db
+desktop.ini
+ehthumbs.db
 
-# IDE
+# =============================================================================
+# IDE & editor
+# =============================================================================
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
 
-# Large ML datasets only (models/artifacts are committed)
-ml/datasets/
-datasets/
+# Cursor local state (keep .cursor/rules if you add them later)
+.cursor/
+
+# =============================================================================
+# Docker / compose overrides (local only)
+# =============================================================================
+docker-compose.override.yml
+docker-compose.local.yml
+
+# =============================================================================
+# Misc local archives
+# =============================================================================
 ml/datasets.zip
-tiles/
-data/

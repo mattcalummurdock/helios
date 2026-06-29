@@ -26,10 +26,10 @@ def poll_aoi(aoi_id: int) -> dict:
 def poll_active_aois(priority_filter: str = "medium") -> dict:
     """Scene Watcher — poll active AOIs via Copernicus STAC and Planet API."""
     priority_map = {
-        "high": [AoiPriority.HIGH],
-        "medium": [AoiPriority.MEDIUM, AoiPriority.LOW],
+        "high": [AoiPriority.HIGH.value],
+        "medium": [AoiPriority.MEDIUM.value, AoiPriority.LOW.value],
     }
-    priorities = priority_map.get(priority_filter, [AoiPriority.MEDIUM, AoiPriority.LOW])
+    priorities = priority_map.get(priority_filter, [AoiPriority.MEDIUM.value, AoiPriority.LOW.value])
 
     results = []
     with SyncSessionLocal() as session:

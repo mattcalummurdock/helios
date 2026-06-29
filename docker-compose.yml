@@ -2,10 +2,11 @@ x-common-env: &common-env
   POSTGRES_DB: ${POSTGRES_DB:-helios}
   POSTGRES_USER: ${POSTGRES_USER:-helios}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://helios:changeme@postgres:5432/helios}
-  DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql://helios:changeme@postgres:5432/helios}
-  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-  TRITON_URL: ${TRITON_URL:-triton:8000}
+  # Fixed in-container URLs — do not override with host DATABASE_URL_SYNC (localhost:5433).
+  DATABASE_URL: postgresql+asyncpg://helios:changeme@postgres:5432/helios
+  DATABASE_URL_SYNC: postgresql://helios:changeme@postgres:5432/helios
+  REDIS_URL: redis://redis:6379/0
+  TRITON_URL: triton:8000
   JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
   COPERNICUS_CLIENT_ID: ${COPERNICUS_CLIENT_ID:-}
   COPERNICUS_CLIENT_SECRET: ${COPERNICUS_CLIENT_SECRET:-}
@@ -62,6 +63,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: helios-redis
+    ports:
+      - "6379:6379"
     networks:
       - helios
     healthcheck:
@@ -141,6 +144,7 @@ services:
       context: .
       dockerfile: services/inference-service/Dockerfile
     container_name: helios-inference-service
+    restart: unless-stopped
     environment:
       <<: *common-env
     volumes:

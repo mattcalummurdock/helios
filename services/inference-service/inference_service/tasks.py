@@ -60,10 +60,10 @@ def _insert_yolo_detections(
             scene_id=scene.id,
             aoi_id=scene.aoi_id,
             class_=det.class_name,
-            confidence=det.confidence,
-            lat=det.lat,
-            lon=det.lon,
-            heading_degrees=det.heading_degrees,
+            confidence=float(det.confidence),
+            lat=float(det.lat),
+            lon=float(det.lon),
+            heading_degrees=float(det.heading_degrees) if det.heading_degrees is not None else None,
             bbox_polygon=WKTElement(det.bbox_wkt, srid=4326),
         )
         session.add(row)
@@ -98,8 +98,8 @@ def _insert_mstar_detection(session, scene: Scene, tile_path: str, result: Mstar
         aoi_id=scene.aoi_id,
         class_=result.class_name,
         confidence=result.confidence,
-        lat=lat,
-        lon=lon,
+        lat=float(lat),
+        lon=float(lon),
         bbox_polygon=WKTElement(f"POINT({lon} {lat})", srid=4326),
     )
     session.add(row)

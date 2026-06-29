@@ -1,0 +1,6 @@
+-r shared/requirements.txt
+-r services/preprocessor/requirements.txt
+-r services/inference-service/requirements.txt
+torch
+torchvision
+ultralytics>=8.2.0

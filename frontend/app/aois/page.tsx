@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createAoi,
   deactivateAoi,
@@ -23,6 +23,7 @@ export default function AoiManagerPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [focusedAoiId, setFocusedAoiId] = useState<number | null>(null);
 
   const loadAois = useCallback(async () => {
     const data = await getAois();
@@ -33,9 +34,16 @@ export default function AoiManagerPage() {
     loadAois().catch(console.error);
   }, [loadAois]);
 
-  const handleSave = async () => {
+  const clearDraft = useCallback(() => {
+    setName("");
+    setPolygon(null);
+    setError(null);
+    setPriority("medium");
+  }, []);
+
+  const handleSave = useCallback(async () => {
     if (!name.trim() || !polygon) {
-      setError("Draw a polygon and enter a name");
+      setError("Enter a name for this AOI");
       return;
     }
     setSaving(true);
@@ -46,28 +54,61 @@ export default function AoiManagerPage() {
         priority,
         geometry: { type: "Polygon", coordinates: polygon },
       });
-      setName("");
-      setPolygon(null);
+      clearDraft();
+      setFocusedAoiId(null);
       await loadAois();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create AOI");
     } finally {
       setSaving(false);
     }
-  };
+  }, [name, polygon, priority, clearDraft, loadAois]);
 
   const handleToggle = async (aoi: AoiFeature) => {
+    setFocusedAoiId(aoi.properties.aoi_id);
     await updateAoi(aoi.properties.aoi_id, {
       monitoring_active: !aoi.properties.monitoring_active,
     });
     await loadAois();
   };
 
+  const handlePolygonDrawn = useCallback((coords: number[][][] | null) => {
+    setFocusedAoiId(null);
+    setError(null);
+    setName("");
+    setPolygon(coords);
+  }, []);
+
+  const handleDrawStart = useCallback(() => {
+    setFocusedAoiId(null);
+    setPolygon(null);
+    setError(null);
+    setName("");
+  }, []);
+
   const handleDelete = async (id: number) => {
     await deactivateAoi(id);
     setDeleteConfirm(null);
+    setFocusedAoiId(id);
     await loadAois();
   };
+
+  const draftForm = useMemo(
+    () =>
+      polygon
+        ? {
+            name,
+            priority,
+            saving,
+            error,
+            onNameChange: setName,
+            onPriorityChange: setPriority,
+            onSave: handleSave,
+            onCancel: clearDraft,
+          }
+        : null,
+    [polygon, name, priority, saving, error, clearDraft, handleSave]
+  );
 
   return (
     <div className="aoi-page">
@@ -77,10 +118,14 @@ export default function AoiManagerPage() {
           <p style={{ color: "#5c7a8a", fontSize: "0.85rem" }}>No AOIs defined yet</p>
         )}
         {aois.map((aoi) => (
-          <div key={aoi.properties.aoi_id} className="aoi-list-item">
+          <div
+            key={aoi.properties.aoi_id}
+            className={`aoi-list-item ${aoi.properties.monitoring_active ? "" : "inactive"}`}
+            onClick={() => setFocusedAoiId(aoi.properties.aoi_id)}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h4>{aoi.properties.name}</h4>
-              <label className="toggle-switch" title="Monitoring active">
+              <label className="toggle-switch" title="Monitoring active" onClick={(e) => e.stopPropagation()}>
                 <input
                   type="checkbox"
                   checked={aoi.properties.monitoring_active}
@@ -110,7 +155,10 @@ export default function AoiManagerPage() {
                 padding: "0.25rem 0.5rem",
                 cursor: "pointer",
               }}
-              onClick={() => setDeleteConfirm(aoi.properties.aoi_id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirm(aoi.properties.aoi_id);
+              }}
             >
               Deactivate
             </button>
@@ -119,44 +167,18 @@ export default function AoiManagerPage() {
       </div>
 
       <div className="aoi-map-panel">
-        <div className="aoi-form">
-          <div>
-            <label style={{ fontSize: "0.7rem", color: "#5c7a8a" }}>Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="AOI name"
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: "0.7rem", color: "#5c7a8a" }}>Priority</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as typeof priority)}
-            >
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-          <button
-            className="toolbar-btn active"
-            onClick={handleSave}
-            disabled={saving}
-            style={{ marginBottom: "0.25rem" }}
-          >
-            {saving ? "Saving…" : "Save AOI"}
-          </button>
-          {polygon && (
-            <span style={{ fontSize: "0.75rem", color: "#98c379" }}>Polygon drawn</span>
-          )}
-          {error && (
-            <span style={{ fontSize: "0.75rem", color: "#e06c75" }}>{error}</span>
-          )}
+        <div className="aoi-map-hint">
+          Use the <strong>polygon tool</strong> on the map to draw a new AOI. A form will appear on the shape.
         </div>
         <div className="aoi-map-container">
-          <AoiDrawMap onPolygonDrawn={setPolygon} />
+          <AoiDrawMap
+            aois={aois}
+            focusedAoiId={focusedAoiId}
+            draftPolygon={polygon}
+            draftForm={draftForm}
+            onDrawStart={handleDrawStart}
+            onPolygonDrawn={handlePolygonDrawn}
+          />
         </div>
       </div>
 

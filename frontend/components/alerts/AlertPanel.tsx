@@ -1,21 +1,28 @@
 "use client";
 
-import { acknowledgeAlert, getAlerts } from "@/lib/api";
-import { getAnalystId } from "@/lib/auth";
+import { getAlerts } from "@/lib/api";
 import type { Alert, AoiFeature } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2 };
 
 type Props = {
+  open: boolean;
+  onClose: () => void;
   aois: AoiFeature[];
   onFlyTo: (lat: number, lon: number) => void;
-  onNewAlert?: (alert: Alert) => void;
+  onCountChange?: (count: number) => void;
   externalAlerts?: Alert[];
 };
 
-export function AlertPanel({ aois, onFlyTo, externalAlerts = [] }: Props) {
-  const [open, setOpen] = useState(false);
+export function AlertPanel({
+  open,
+  onClose,
+  aois,
+  onFlyTo,
+  onCountChange,
+  externalAlerts = [],
+}: Props) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
 
   const aoiNameMap = useMemo(() => {
@@ -25,9 +32,14 @@ export function AlertPanel({ aois, onFlyTo, externalAlerts = [] }: Props) {
   }, [aois]);
 
   const loadAlerts = useCallback(async () => {
-    const data = await getAlerts({ acknowledged: false });
+    const data = await getAlerts();
     setAlerts(data.alerts);
-  }, []);
+    onCountChange?.(data.alerts.length);
+  }, [onCountChange]);
+
+  useEffect(() => {
+    onCountChange?.(alerts.length);
+  }, [alerts.length, onCountChange]);
 
   useEffect(() => {
     loadAlerts().catch(console.error);
@@ -41,12 +53,14 @@ export function AlertPanel({ aois, onFlyTo, externalAlerts = [] }: Props) {
     setAlerts((prev) => {
       const ids = new Set(prev.map((a) => a.id));
       const merged = [...externalAlerts.filter((a) => !ids.has(a.id)), ...prev];
-      return merged.sort((a, b) => {
+      const sorted = merged.sort((a, b) => {
         const sd =
           (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9);
         if (sd !== 0) return sd;
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       });
+      onCountChange?.(sorted.length);
+      return sorted;
     });
     const latest = externalAlerts[0];
     if (latest?.severity === "critical" && Notification.permission === "granted") {
@@ -56,30 +70,18 @@ export function AlertPanel({ aois, onFlyTo, externalAlerts = [] }: Props) {
     }
   }, [externalAlerts]);
 
-  const handleAck = async (id: number) => {
-    await acknowledgeAlert(id, getAnalystId());
-    setAlerts((prev) => prev.filter((a) => a.id !== id));
-  };
-
   return (
-    <>
-      <div className="alert-panel-toggle" style={{ right: open ? "380px" : "0.75rem" }}>
-        <button className="alert-bell" onClick={() => setOpen(!open)} aria-label="Alerts">
-          🔔
-          {alerts.length > 0 && <span className="alert-badge">{alerts.length}</span>}
+    <div className={`alert-panel panel ${open ? "open" : ""}`}>
+      <div className="alert-panel-header">
+        <h3>Alerts</h3>
+        <button className="panel-close" onClick={onClose}>
+          ×
         </button>
       </div>
-      <div className={`alert-panel panel ${open ? "open" : ""}`}>
-        <div className="alert-panel-header">
-          <h3>Alerts</h3>
-          <button className="panel-close" onClick={() => setOpen(false)}>
-            ×
-          </button>
-        </div>
         <div className="alert-panel-list">
           {alerts.length === 0 && (
             <p style={{ color: "#5c7a8a", fontSize: "0.85rem", padding: "0.5rem" }}>
-              No unacknowledged alerts
+              No alerts
             </p>
           )}
           {alerts.map((alert) => (
@@ -97,12 +99,10 @@ export function AlertPanel({ aois, onFlyTo, externalAlerts = [] }: Props) {
               </div>
               <div className="alert-card-actions">
                 <button onClick={() => onFlyTo(alert.lat, alert.lon)}>Fly To</button>
-                <button onClick={() => handleAck(alert.id)}>Acknowledge</button>
               </div>
             </div>
           ))}
         </div>
       </div>
-    </>
   );
 }

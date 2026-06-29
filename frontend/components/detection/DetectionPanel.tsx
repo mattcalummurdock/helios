@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchGradCamBlob } from "@/lib/api";
+import { fetchDetectionImageBlob } from "@/lib/api";
+import { detectionModelLabel } from "@/lib/detection-display";
 import type { DetectionFeature } from "@/lib/types";
 
 type Props = {
@@ -10,44 +11,67 @@ type Props = {
 };
 
 export function DetectionPanel({ detection, onClose }: Props) {
-  const [gradcamUrl, setGradcamUrl] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageLabel, setImageLabel] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!detection) {
-      setGradcamUrl(null);
+      setImageUrl(null);
+      setImageLabel(null);
+      setLoading(false);
       return;
     }
+
     let revoked: string | null = null;
-    fetchGradCamBlob(detection.properties.detection_id).then((blob) => {
-      if (blob) {
-        revoked = URL.createObjectURL(blob);
-        setGradcamUrl(revoked);
-      } else {
-        setGradcamUrl(null);
+    let cancelled = false;
+    const detectionId = detection.properties.detection_id;
+
+    setLoading(true);
+    setImageUrl(null);
+    setImageLabel(null);
+
+    (async () => {
+      for (const kind of ["crop", "gradcam"] as const) {
+        const blob = await fetchDetectionImageBlob(detectionId, kind);
+        if (cancelled) return;
+        if (blob) {
+          revoked = URL.createObjectURL(blob);
+          setImageUrl(revoked);
+          setImageLabel(kind === "gradcam" ? "Grad-CAM heatmap" : "Satellite crop");
+          break;
+        }
       }
-    });
+      if (!cancelled) setLoading(false);
+    })();
+
     return () => {
+      cancelled = true;
       if (revoked) URL.revokeObjectURL(revoked);
     };
-  }, [detection]);
+  }, [detection?.properties.detection_id]);
 
   if (!detection) return null;
   const p = detection.properties;
+  const model = detectionModelLabel(p.class, p.subclass);
 
   return (
     <div className="panel detection-panel">
       <button className="panel-close" onClick={onClose} aria-label="Close">
         ×
       </button>
-      <h3>Detection #{p.detection_id}</h3>
+      <h3>
+        Detection #{p.detection_id}
+        {model ? ` — ${model}` : ""}
+      </h3>
       <div className="row">
         <span>Class</span>
         <span>{p.class}</span>
       </div>
-      {p.subclass && (
+      {model && (
         <div className="row">
-          <span>Subclass</span>
-          <span>{p.subclass}</span>
+          <span>Model</span>
+          <span>{model}</span>
         </div>
       )}
       <div className="row">
@@ -74,11 +98,17 @@ export function DetectionPanel({ detection, onClose }: Props) {
         <span>Source</span>
         <span>{p.satellite_source || "—"}</span>
       </div>
-      {gradcamUrl ? (
-        <img src={gradcamUrl} alt="Grad-CAM heatmap" className="gradcam" />
-      ) : (
+      {loading && (
         <p className="meta" style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "#5c7a8a" }}>
-          Grad-CAM not available for this detection
+          Loading image…
+        </p>
+      )}
+      {!loading && imageUrl && (
+        <img src={imageUrl} alt={imageLabel || "Detection image"} className="gradcam" />
+      )}
+      {!loading && !imageUrl && (
+        <p className="meta" style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "#5c7a8a" }}>
+          No crop or Grad-CAM image available for this detection
         </p>
       )}
     </div>

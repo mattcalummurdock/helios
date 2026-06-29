@@ -1,15 +1,28 @@
 from datetime import datetime
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from helios_common.paths import resolve_detection_asset
+
 from deps import get_db, require_auth
 from services.queries import fetch_detections_geojson
 
 router = APIRouter(prefix="/detections", tags=["detections"])
+
+
+def _serve_detection_asset(
+    stored_path: str | None,
+    detection_id: int,
+    filename: str,
+    label: str,
+) -> FileResponse:
+    path = resolve_detection_asset(stored_path, detection_id, filename)
+    if path is None:
+        raise HTTPException(status_code=404, detail=f"{label} file missing on disk")
+    return FileResponse(path, media_type="image/png", filename=f"{filename.replace('.png', '')}_{detection_id}.png")
 
 
 @router.get("")
@@ -34,6 +47,22 @@ async def list_detections(
     )
 
 
+@router.get("/{detection_id}/crop")
+async def get_detection_crop(
+    detection_id: int,
+    session: AsyncSession = Depends(get_db),
+    _: str = Depends(require_auth),
+):
+    result = await session.execute(
+        text("SELECT detection_image_path FROM detections WHERE id = :id"),
+        {"id": detection_id},
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Detection not found")
+    return _serve_detection_asset(row[0], detection_id, "crop.png", "Crop")
+
+
 @router.get("/{detection_id}/gradcam")
 async def get_detection_gradcam(
     detection_id: int,
@@ -47,9 +76,4 @@ async def get_detection_gradcam(
     row = result.first()
     if not row or not row[0]:
         raise HTTPException(status_code=404, detail="Grad-CAM not found for detection")
-
-    path = Path(row[0])
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="Grad-CAM file missing on disk")
-
-    return FileResponse(path, media_type="image/png", filename=f"gradcam_{detection_id}.png")
+    return _serve_detection_asset(row[0], detection_id, "gradcam.png", "Grad-CAM")

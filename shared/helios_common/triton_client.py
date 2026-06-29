@@ -15,6 +15,23 @@ from helios_common.config import settings
 logger = logging.getLogger(__name__)
 
 YOLO_CLASSES = ["vehicle", "ship", "aircraft", "helicopter"]
+
+# Trained YOLO-OBB uses full DOTA v1.0 taxonomy (15 classes). Map to MVP labels.
+DOTA_CLS_TO_MVP: dict[int, str | None] = {
+    0: "aircraft",  # plane
+    1: "ship",
+    9: "vehicle",  # large-vehicle
+    10: "vehicle",  # small-vehicle
+    11: "helicopter",
+}
+
+
+def _mvp_class_name(cls_id: int) -> str | None:
+    if cls_id in DOTA_CLS_TO_MVP:
+        return DOTA_CLS_TO_MVP[cls_id]
+    if cls_id < len(YOLO_CLASSES):
+        return YOLO_CLASSES[cls_id]
+    return None
 MSTAR_CLASSES = [
     "2S1",
     "BRDM_2",
@@ -48,14 +65,36 @@ class MstarResult:
 def _triton_client():
     import tritonclient.http as httpclient
 
-    url = settings.triton_url
-    if not url.startswith("http"):
-        url = f"http://{url}"
+    url = settings.triton_url.strip()
+    if url.startswith("http://"):
+        url = url.removeprefix("http://")
+    elif url.startswith("https://"):
+        url = url.removeprefix("https://")
     return httpclient.InferenceServerClient(url=url)
 
 
 def _load_tile_rgb(path: str, size: int) -> np.ndarray:
     import cv2
+
+    low = path.lower()
+    if low.endswith((".tif", ".tiff")):
+        try:
+            import rasterio
+
+            with rasterio.open(path) as src:
+                n = min(3, src.count)
+                bands = [src.read(i + 1) for i in range(n)]
+                if n == 1:
+                    rgb = np.stack([bands[0]] * 3, axis=-1)
+                else:
+                    rgb = np.transpose(np.stack(bands[:3], axis=0), (1, 2, 0))
+                rgb = rgb.astype(np.float32)
+                if rgb.max() > 1.0:
+                    rgb /= 255.0
+                rgb = cv2.resize(rgb, (size, size), interpolation=cv2.INTER_LINEAR)
+                return np.clip(rgb, 0, 1).astype(np.float32)
+        except Exception as exc:
+            logger.warning("rasterio tile load failed %s: %s", path, exc)
 
     img = cv2.imread(path, cv2.IMREAD_COLOR)
     if img is None:
@@ -89,7 +128,7 @@ def _pixel_to_lonlat(
         px = cx * scale_x
         py = cy * scale_y
         lon, lat = src.transform * (px, py)
-    return lat, lon
+    return float(lat), float(lon)
 
 
 def _obb_corners(cx: float, cy: float, w: float, h: float, angle: float, img_size: int) -> list[tuple[float, float]]:
@@ -119,7 +158,9 @@ def _corners_to_wkt(corners_norm: list[tuple[float, float]], tile_path: str, img
 def _parse_yolo_output(output: np.ndarray, conf_min: float) -> list[tuple]:
     """Parse YOLO OBB output tensor into (cx,cy,w,h,angle,conf,cls) rows."""
     arr = np.squeeze(output)
-    if arr.ndim == 2 and arr.shape[0] in (7, 8, 11, 12):
+    if arr.ndim == 3:
+        arr = arr[0]
+    if arr.ndim == 2 and arr.shape[0] < arr.shape[1] and arr.shape[0] in (7, 8, 11, 12, 15, 20, 84):
         arr = arr.T
     if arr.ndim != 2:
         return []
@@ -131,9 +172,9 @@ def _parse_yolo_output(output: np.ndarray, conf_min: float) -> list[tuple]:
         if row.shape[0] == 7:
             conf, cls_id = float(row[5]), int(row[6])
         else:
-            cls_scores = row[5:-1] if row.shape[0] > 7 else row[5:9]
+            cls_scores = row[5:]
             cls_id = int(np.argmax(cls_scores))
-            conf = float(row[-1]) if row.shape[0] > 7 else float(np.max(cls_scores))
+            conf = float(cls_scores[cls_id])
         if conf < conf_min:
             continue
         rows.append((cx, cy, w, h, angle, conf, cls_id))
@@ -173,7 +214,7 @@ def infer_yolo(tile_path: str, img_size: int = 640) -> list[YoloDetection]:
     model = settings.triton_yolo_model
 
     img = _load_tile_rgb(tile_path, img_size)
-    chw = np.transpose(img, (2, 0, 1)).astype(np.float32)
+    chw = np.transpose(img, (2, 0, 1)).astype(np.float32)[np.newaxis, ...]
 
     inputs = [httpclient.InferInput("images", chw.shape, "FP32")]
     inputs[0].set_data_from_numpy(chw)
@@ -185,7 +226,9 @@ def infer_yolo(tile_path: str, img_size: int = 640) -> list[YoloDetection]:
 
     detections: list[YoloDetection] = []
     for cx, cy, w, h, angle, conf, cls_id in rows:
-        cls_name = YOLO_CLASSES[cls_id] if cls_id < len(YOLO_CLASSES) else "vehicle"
+        cls_name = _mvp_class_name(cls_id)
+        if cls_name is None:
+            continue
         lat, lon = _pixel_to_lonlat(cx, cy, tile_path, img_size)
         corners = _obb_corners(cx, cy, w, h, angle, img_size)
         wkt = _corners_to_wkt(corners, tile_path, img_size)

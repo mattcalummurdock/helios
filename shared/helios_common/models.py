@@ -18,6 +18,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from helios_common.db import Base
 
 
+def _pg_enum_values(enum_cls: type[enum.Enum]) -> list[str]:
+    """Map Postgres lowercase enum labels to Python str enums."""
+    return [member.value for member in enum_cls]
+
+
 class AoiPriority(str, enum.Enum):
     HIGH = "high"
     MEDIUM = "medium"
@@ -48,7 +53,13 @@ class Aoi(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     priority: Mapped[AoiPriority] = mapped_column(
-        Enum(AoiPriority, name="aoi_priority", create_type=False), nullable=False
+        Enum(
+            AoiPriority,
+            name="aoi_priority",
+            create_type=False,
+            values_callable=_pg_enum_values,
+        ),
+        nullable=False,
     )
     polygon = mapped_column(Geometry("POLYGON", srid=4326), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -112,7 +123,13 @@ class ChangeEvent(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     aoi_id: Mapped[int] = mapped_column(ForeignKey("aois.id", ondelete="CASCADE"), nullable=False)
     event_type: Mapped[ChangeEventType] = mapped_column(
-        Enum(ChangeEventType, name="change_event_type", create_type=False), nullable=False
+        Enum(
+            ChangeEventType,
+            name="change_event_type",
+            create_type=False,
+            values_callable=_pg_enum_values,
+        ),
+        nullable=False,
     )
     detection_id_t1: Mapped[int | None] = mapped_column(
         ForeignKey("detections.id", ondelete="SET NULL")
@@ -142,7 +159,13 @@ class Alert(Base):
     )
     alert_type: Mapped[str] = mapped_column(String(64), nullable=False)
     severity: Mapped[AlertSeverity] = mapped_column(
-        Enum(AlertSeverity, name="alert_severity", create_type=False), nullable=False
+        Enum(
+            AlertSeverity,
+            name="alert_severity",
+            create_type=False,
+            values_callable=_pg_enum_values,
+        ),
+        nullable=False,
     )
     lat: Mapped[float] = mapped_column(Float, nullable=False)
     lon: Mapped[float] = mapped_column(Float, nullable=False)

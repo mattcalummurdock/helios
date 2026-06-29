@@ -34,12 +34,23 @@ def tile_image(stack_path: Path, scene_id: int) -> list[str]:
                     col_idx += 1
                     continue
 
+                # uint8 RGB tiles — OpenCV inference cannot read float32 GeoTIFF
+                if data.dtype != np.uint8:
+                    data = data.astype(np.float32)
+                    if np.nanmax(data) <= 1.0:
+                        data = np.clip(data * 255.0, 0, 255)
+                    else:
+                        data = np.clip(data, 0, 255)
+                    data = data.astype(np.uint8)
+
                 transform = src.window_transform(window)
                 profile = src.profile.copy()
                 profile.update(
                     height=tile_size,
                     width=tile_size,
                     transform=transform,
+                    dtype="uint8",
+                    count=data.shape[0],
                 )
                 out = tile_path(scene_id, row_idx, col_idx)
                 out.parent.mkdir(parents=True, exist_ok=True)

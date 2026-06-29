@@ -16,8 +16,6 @@ const CLASSES = ["vehicle", "ship", "aircraft", "helicopter", "plane", "tank"];
 export function ExportModal({ open, onClose, aois }: Props) {
   const [format, setFormat] = useState<(typeof FORMATS)[number]>("csv");
   const [aoiId, setAoiId] = useState<string>("");
-  const [timeStart, setTimeStart] = useState("");
-  const [timeEnd, setTimeEnd] = useState("");
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,8 +35,6 @@ export function ExportModal({ open, onClose, aois }: Props) {
       const blob = await exportDetections({
         format,
         aoi_id: aoiId ? Number(aoiId) : undefined,
-        time_start: timeStart ? new Date(timeStart).toISOString() : undefined,
-        time_end: timeEnd ? new Date(timeEnd).toISOString() : undefined,
         classes: selectedClasses.length ? selectedClasses : undefined,
       });
       const ext = format === "geojson" ? "geojson" : format;
@@ -77,10 +73,6 @@ export function ExportModal({ open, onClose, aois }: Props) {
             </option>
           ))}
         </select>
-        <label>Time start</label>
-        <input type="datetime-local" value={timeStart} onChange={(e) => setTimeStart(e.target.value)} />
-        <label>Time end</label>
-        <input type="datetime-local" value={timeEnd} onChange={(e) => setTimeEnd(e.target.value)} />
         <label>Classes</label>
         <div className="class-checkboxes">
           {CLASSES.map((cls) => (
