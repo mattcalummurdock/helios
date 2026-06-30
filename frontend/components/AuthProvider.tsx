@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { ensureAuth } from "@/lib/auth";
+import { isDemoMode } from "@/lib/demo";
 
 type AuthContextValue = {
   ready: boolean;
@@ -30,7 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   if (!ready) {
-    return <div className="auth-loading">Connecting to Helios API…</div>;
+    return (
+      <div className="auth-loading">
+        {isDemoMode() ? "Loading…" : "Connecting to Helios API…"}
+      </div>
+    );
   }
 
   return <AuthContext.Provider value={{ ready, error }}>{children}</AuthContext.Provider>;

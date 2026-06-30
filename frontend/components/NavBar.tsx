@@ -15,9 +15,6 @@ export function NavBar() {
         <Link href="/aois" className={path === "/aois" ? "active" : ""}>
           AOI Manager
         </Link>
-        <Link href="/status" className={path === "/status" ? "active" : ""}>
-          Status
-        </Link>
       </div>
     </nav>
   );

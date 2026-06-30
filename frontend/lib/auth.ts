@@ -1,5 +1,8 @@
+import { isDemoMode } from "./demo";
+
 const TOKEN_KEY = "helios_jwt";
 const ANALYST_KEY = "helios_analyst_id";
+const DEMO_TOKEN = "demo-static-token";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -31,6 +34,11 @@ export function setToken(token: string): void {
 }
 
 export async function ensureAuth(): Promise<string> {
+  if (isDemoMode()) {
+    setToken(DEMO_TOKEN);
+    return DEMO_TOKEN;
+  }
+
   const existing = getToken();
   if (existing) return existing;
 

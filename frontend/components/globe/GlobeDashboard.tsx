@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCesium, type CesiumNamespace } from "@/lib/cesium-loader";
 import { getAois, getChanges, getDetections, getScenes } from "@/lib/api";
 import { detectionModelLabel } from "@/lib/detection-display";
+import { isDemoMode } from "@/lib/demo";
 import { HeliosWebSocket } from "@/lib/ws";
 import { iconForClass, scaleForConfidence, CHANGE_COLORS, aoiStyle } from "@/lib/icons";
 import type {
@@ -113,7 +114,7 @@ export default function GlobeDashboard() {
   const [selectedChange, setSelectedChange] = useState<ChangeEvent | null>(null);
   const [processingAois, setProcessingAois] = useState<Set<number>>(new Set());
   const [pulseOn, setPulseOn] = useState(true);
-  const [isLive, setIsLive] = useState(true);
+  const [isLive, setIsLive] = useState(() => !isDemoMode());
   const [timeEnd, setTimeEnd] = useState<Date | null>(null);
   const [showDetections, setShowDetections] = useState(true);
   const [showAois, setShowAois] = useState(true);
@@ -249,6 +250,8 @@ export default function GlobeDashboard() {
   }, [isLive, timeEnd, refreshDetections]);
 
   useEffect(() => {
+    if (isDemoMode()) return;
+
     const ws = new HeliosWebSocket({
       onEvent: (event: WsEvent) => {
         if (event.type === "detection_created" && isLive) {

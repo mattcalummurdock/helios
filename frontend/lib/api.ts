@@ -3,6 +3,19 @@ import {
   authHeaders,
   getApiUrl,
 } from "./auth";
+import {
+  demoAlerts,
+  demoAois,
+  demoChanges,
+  demoCreateAoi,
+  demoDeactivateAoi,
+  demoDetectionImageBlob,
+  demoDetections,
+  demoScenes,
+  demoUpdateAoi,
+  isDemoMode,
+} from "./demo";
+import { demoExportExtension, exportDemoDetections } from "./demo-export";
 import type {
   Alert,
   AoiFeature,
@@ -13,6 +26,32 @@ import type {
   FeatureCollection,
   Scene,
 } from "./types";
+
+function filterDetections(
+  features: DetectionFeature[],
+  params: DetectionQuery = {}
+): DetectionFeature[] {
+  let out = features;
+  if (params.aoi_id != null) {
+    out = out.filter((f) => f.properties.aoi_id === params.aoi_id);
+  }
+  if (params.classes?.length) {
+    const set = new Set(params.classes);
+    out = out.filter((f) => set.has(f.properties.class));
+  }
+  if (params.confidence_min != null) {
+    out = out.filter((f) => f.properties.confidence >= params.confidence_min!);
+  }
+  if (params.time_start) {
+    const start = new Date(params.time_start).getTime();
+    out = out.filter((f) => new Date(f.properties.timestamp).getTime() >= start);
+  }
+  if (params.time_end) {
+    const end = new Date(params.time_end).getTime();
+    out = out.filter((f) => new Date(f.properties.timestamp).getTime() <= end);
+  }
+  return out;
+}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   await ensureAuth();
@@ -50,6 +89,7 @@ function queryString(params: Record<string, string | number | boolean | undefine
 }
 
 export async function getAois(): Promise<FeatureCollection<AoiFeature>> {
+  if (isDemoMode()) return demoAois();
   return apiFetch("/aois");
 }
 
@@ -58,6 +98,7 @@ export async function createAoi(body: {
   priority: string;
   geometry: { type: "Polygon"; coordinates: number[][][] };
 }): Promise<AoiFeature> {
+  if (isDemoMode()) return demoCreateAoi(body);
   return apiFetch("/aois", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -69,6 +110,7 @@ export async function updateAoi(
   id: number,
   body: { monitoring_active?: boolean; priority?: string }
 ): Promise<AoiFeature> {
+  if (isDemoMode()) return demoUpdateAoi(id, body);
   return apiFetch(`/aois/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -77,12 +119,17 @@ export async function updateAoi(
 }
 
 export async function deactivateAoi(id: number): Promise<{ id: number; monitoring_active: boolean }> {
+  if (isDemoMode()) return demoDeactivateAoi(id);
   return apiFetch(`/aois/${id}`, { method: "DELETE" });
 }
 
 export async function getDetections(
   params: DetectionQuery = {}
 ): Promise<FeatureCollection<DetectionFeature>> {
+  if (isDemoMode()) {
+    const data = await demoDetections();
+    return { type: "FeatureCollection", features: filterDetections(data.features, params) };
+  }
   return apiFetch(`/detections${queryString(params as Record<string, string | number | undefined | string[]>)}`);
 }
 
@@ -91,6 +138,20 @@ export async function getChanges(params: {
   time_start?: string;
   time_end?: string;
 } = {}): Promise<{ events: ChangeEvent[] }> {
+  if (isDemoMode()) {
+    const data = await demoChanges();
+    let events = data.events;
+    if (params.aoi_id != null) events = events.filter((e) => e.aoi_id === params.aoi_id);
+    if (params.time_start) {
+      const start = new Date(params.time_start).getTime();
+      events = events.filter((e) => new Date(e.timestamp).getTime() >= start);
+    }
+    if (params.time_end) {
+      const end = new Date(params.time_end).getTime();
+      events = events.filter((e) => new Date(e.timestamp).getTime() <= end);
+    }
+    return { events };
+  }
   return apiFetch(`/changes${queryString(params)}`);
 }
 
@@ -99,6 +160,14 @@ export async function getAlerts(params: {
   severity?: string;
   acknowledged?: boolean;
 } = {}): Promise<{ alerts: Alert[] }> {
+  if (isDemoMode()) {
+    const data = await demoAlerts();
+    let alerts = data.alerts;
+    if (params.aoi_id != null) alerts = alerts.filter((a) => a.aoi_id === params.aoi_id);
+    if (params.severity) alerts = alerts.filter((a) => a.severity === params.severity);
+    if (params.acknowledged != null) alerts = alerts.filter((a) => a.acknowledged === params.acknowledged);
+    return { alerts };
+  }
   return apiFetch(`/alerts${queryString(params)}`);
 }
 
@@ -106,6 +175,9 @@ export async function acknowledgeAlert(
   id: number,
   acknowledgedBy: string
 ): Promise<{ id: number; acknowledged: boolean; acknowledged_by: string }> {
+  if (isDemoMode()) {
+    return { id, acknowledged: true, acknowledged_by: acknowledgedBy };
+  }
   return apiFetch(`/alerts/${id}/acknowledge`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -114,6 +186,7 @@ export async function acknowledgeAlert(
 }
 
 export async function getScenes(aoiId?: number): Promise<{ scenes: Scene[] }> {
+  if (isDemoMode()) return demoScenes(aoiId);
   return apiFetch(`/scenes${queryString({ aoi_id: aoiId })}`);
 }
 
@@ -121,6 +194,7 @@ export async function fetchDetectionImageBlob(
   detectionId: number,
   kind: "gradcam" | "crop" = "gradcam"
 ): Promise<Blob | null> {
+  if (isDemoMode()) return demoDetectionImageBlob(detectionId, kind);
   await ensureAuth();
   const res = await fetch(`${getApiUrl()}/detections/${detectionId}/${kind}`, {
     headers: authHeaders(),
@@ -135,6 +209,7 @@ export async function fetchGradCamBlob(detectionId: number): Promise<Blob | null
 }
 
 export async function exportDetections(params: ExportQuery): Promise<Blob> {
+  if (isDemoMode()) return exportDemoDetections(params);
   await ensureAuth();
   const res = await fetch(
     `${getApiUrl()}/export${queryString(params as Record<string, string | number | undefined | string[]>)}`,
@@ -146,12 +221,4 @@ export async function exportDetections(params: ExportQuery): Promise<Blob> {
   return res.blob();
 }
 
-export async function getHealth(): Promise<{
-  status: string;
-  db?: string;
-  phase?: number;
-  ws_clients?: number;
-}> {
-  const res = await fetch(`${getApiUrl()}/health`);
-  return res.json();
-}
+export { demoExportExtension } from "./demo-export";

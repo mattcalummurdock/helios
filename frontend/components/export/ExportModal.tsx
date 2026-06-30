@@ -1,6 +1,7 @@
 "use client";
 
-import { exportDetections } from "@/lib/api";
+import { demoExportExtension, exportDetections } from "@/lib/api";
+import { isDemoMode } from "@/lib/demo";
 import type { AoiFeature } from "@/lib/types";
 import { useState } from "react";
 
@@ -37,7 +38,7 @@ export function ExportModal({ open, onClose, aois }: Props) {
         aoi_id: aoiId ? Number(aoiId) : undefined,
         classes: selectedClasses.length ? selectedClasses : undefined,
       });
-      const ext = format === "geojson" ? "geojson" : format;
+      const ext = isDemoMode() ? demoExportExtension(format) : format === "geojson" ? "geojson" : format;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

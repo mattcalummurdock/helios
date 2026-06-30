@@ -24,6 +24,7 @@ const cesiumToken =
 const nextConfig = {
   output: "standalone",
   env: {
+    NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE || "",
     NEXT_PUBLIC_CESIUM_ION_TOKEN: cesiumToken,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080",
   },

@@ -1,4 +1,5 @@
 import { ensureAuth, getToken, getWsUrl } from "./auth";
+import { isDemoMode } from "./demo";
 import type { WsEvent } from "./types";
 
 export type WsHandlers = {
@@ -19,6 +20,8 @@ export class HeliosWebSocket {
   }
 
   async connect(): Promise<void> {
+    if (isDemoMode()) return;
+
     this.closed = false;
     await ensureAuth();
     const token = getToken();
