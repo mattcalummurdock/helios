@@ -1,4 +1,4 @@
-/** Static demo mode — bundled JSON compiled into the Next.js build (Vercel-safe). */
+/** Static demo — bundled JSON compiled into the Next.js build. */
 
 import type { Alert, AoiFeature, ChangeEvent, DetectionFeature, FeatureCollection, Scene } from "./types";
 
@@ -10,38 +10,59 @@ import bundledScenes from "@/demo-data/scenes.json";
 
 const AOI_STORE_KEY = "helios_demo_aois";
 
-/** Use static demo data when explicitly enabled or when API URL points at localhost (Vercel default). */
+const bundledAoiCollection = bundledAois as FeatureCollection<AoiFeature>;
+
+/** Bundled demo is the default for Vercel; set NEXT_PUBLIC_DEMO_MODE=false only for a live API backend. */
 export function isDemoMode(): boolean {
-  const flag = process.env.NEXT_PUBLIC_DEMO_MODE;
-  if (flag === "true") return true;
-  if (flag === "false") return false;
-  const api = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").toLowerCase();
-  return api.includes("localhost") || api.includes("127.0.0.1");
+  return process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 }
 
-function readAoiStore(): AoiFeature[] | null {
-  if (typeof window === "undefined") return null;
+/** Drop corrupted/empty AOI overrides from older broken deploys. */
+export function resetDemoStorageIfNeeded(): void {
+  if (typeof window === "undefined") return;
   try {
     const raw = localStorage.getItem(AOI_STORE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { features: AoiFeature[] };
-    return parsed.features?.length ? parsed.features : null;
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as { features?: AoiFeature[] };
+    if (!parsed.features?.length) {
+      localStorage.removeItem(AOI_STORE_KEY);
+    }
   } catch {
-    return null;
+    localStorage.removeItem(AOI_STORE_KEY);
   }
 }
 
-function writeAoiStore(features: AoiFeature[]): void {
+function readAoiOverrides(): AoiFeature[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(AOI_STORE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { features?: AoiFeature[] };
+    return parsed.features ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAoiOverrides(features: AoiFeature[]): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(AOI_STORE_KEY, JSON.stringify({ type: "FeatureCollection", features }));
 }
 
-export async function demoAois(): Promise<FeatureCollection<AoiFeature>> {
-  const stored = readAoiStore();
-  if (stored) {
-    return { type: "FeatureCollection", features: stored };
+function mergeAois(overrides: AoiFeature[]): FeatureCollection<AoiFeature> {
+  const base = bundledAoiCollection.features;
+  if (!overrides.length) {
+    return { type: "FeatureCollection", features: base };
   }
-  return bundledAois as FeatureCollection<AoiFeature>;
+  const byId = new Map(base.map((f) => [f.properties.aoi_id, f]));
+  for (const o of overrides) {
+    byId.set(o.properties.aoi_id, o);
+  }
+  return { type: "FeatureCollection", features: [...byId.values()] };
+}
+
+export async function demoAois(): Promise<FeatureCollection<AoiFeature>> {
+  return mergeAois(readAoiOverrides());
 }
 
 export async function demoCreateAoi(body: {
@@ -64,7 +85,7 @@ export async function demoCreateAoi(body: {
       active_detection_count: 0,
     },
   };
-  writeAoiStore([...features, feature]);
+  writeAoiOverrides([...readAoiOverrides(), feature]);
   return feature;
 }
 
@@ -72,10 +93,10 @@ export async function demoUpdateAoi(
   id: number,
   body: { monitoring_active?: boolean; priority?: string }
 ): Promise<AoiFeature> {
-  const { features } = await demoAois();
-  const idx = features.findIndex((f) => f.properties.aoi_id === id);
+  const merged = await demoAois();
+  const idx = merged.features.findIndex((f) => f.properties.aoi_id === id);
   if (idx < 0) throw new Error("AOI not found");
-  const updated = { ...features[idx] };
+  const updated = { ...merged.features[idx] };
   if (body.monitoring_active !== undefined) {
     updated.properties = { ...updated.properties, monitoring_active: body.monitoring_active };
   }
@@ -85,9 +106,11 @@ export async function demoUpdateAoi(
       priority: body.priority as AoiFeature["properties"]["priority"],
     };
   }
-  const next = [...features];
-  next[idx] = updated;
-  writeAoiStore(next);
+  const overrides = readAoiOverrides();
+  const oIdx = overrides.findIndex((f) => f.properties.aoi_id === id);
+  if (oIdx >= 0) overrides[oIdx] = updated;
+  else overrides.push(updated);
+  writeAoiOverrides(overrides);
   return updated;
 }
 
@@ -121,4 +144,14 @@ export async function demoDetectionImageBlob(
   const res = await fetch(`/demo/images/detections/${detectionId}/${kind}.png`);
   if (!res.ok) return null;
   return res.blob();
+}
+
+/** For debugging — counts baked into the client bundle. */
+export function demoDataCounts() {
+  return {
+    aois: bundledAoiCollection.features.length,
+    detections: (bundledDetections as FeatureCollection<DetectionFeature>).features.length,
+    changes: (bundledChanges as { events: ChangeEvent[] }).events.length,
+    alerts: (bundledAlerts as { alerts: Alert[] }).alerts.length,
+  };
 }

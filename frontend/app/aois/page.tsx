@@ -26,12 +26,17 @@ export default function AoiManagerPage() {
   const [focusedAoiId, setFocusedAoiId] = useState<number | null>(null);
 
   const loadAois = useCallback(async () => {
-    const data = await getAois();
-    setAois(data.features);
+    setError(null);
+    try {
+      const data = await getAois();
+      setAois(data.features);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load AOIs");
+    }
   }, []);
 
   useEffect(() => {
-    loadAois().catch(console.error);
+    loadAois();
   }, [loadAois]);
 
   const clearDraft = useCallback(() => {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCesium, type CesiumNamespace } from "@/lib/cesium-loader";
 import { getAois, getChanges, getDetections, getScenes } from "@/lib/api";
 import { detectionModelLabel } from "@/lib/detection-display";
-import { isDemoMode } from "@/lib/demo";
+import { isDemoMode, demoDataCounts } from "@/lib/demo";
 import { HeliosWebSocket } from "@/lib/ws";
 import { iconForClass, scaleForConfidence, CHANGE_COLORS, aoiStyle } from "@/lib/icons";
 import type {
@@ -123,6 +123,7 @@ export default function GlobeDashboard() {
   const [exportOpen, setExportOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [newAlerts, setNewAlerts] = useState<Alert[]>([]);
   const [flyTarget, setFlyTarget] = useState<{ lon: number; lat: number } | null>(null);
   const initialFlyDone = useRef(false);
@@ -199,38 +200,54 @@ export default function GlobeDashboard() {
   }, []);
 
   const loadData = useCallback(async () => {
+    setLoadError(null);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [aoiData, changeData, detAll] = await Promise.all([
-      getAois(),
-      getChanges(),
-      getDetections({ time_start: thirtyDaysAgo.toISOString() }),
-    ]);
+    try {
+      const [aoiData, changeData, detAll] = await Promise.all([
+        getAois(),
+        getChanges(),
+        getDetections({ time_start: thirtyDaysAgo.toISOString() }),
+      ]);
 
-    setAois(aoiData.features);
-    setChanges(changeData.events);
-    setAllDetections(detAll.features);
-    setDetections(detAll.features);
+      setAois(aoiData.features);
+      setChanges(changeData.events);
+      setAllDetections(detAll.features);
+      setDetections(detAll.features);
 
-    if (aoiData.features.length > 0 && !initialFlyDone.current) {
-      const c = aoiCentroid(aoiData.features[0].geometry.coordinates);
-      setFlyTarget(c);
-      initialFlyDone.current = true;
+      if (
+        isDemoMode() &&
+        aoiData.features.length === 0 &&
+        demoDataCounts().aois > 0
+      ) {
+        setLoadError("Demo data failed to load — redeploy with frontend/demo-data/ committed.");
+        return;
+      }
+
+      if (aoiData.features.length > 0 && !initialFlyDone.current) {
+        const c = aoiCentroid(aoiData.features[0].geometry.coordinates);
+        setFlyTarget(c);
+        initialFlyDone.current = true;
+      }
+
+      const sceneMap = new Map<number, Scene>();
+      await Promise.all(
+        aoiData.features.map(async (a) => {
+          const { scenes } = await getScenes(a.properties.aoi_id);
+          if (scenes[0]) sceneMap.set(a.properties.aoi_id, scenes[0]);
+        })
+      );
+      setScenesByAoi(sceneMap);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to load surveillance data";
+      setLoadError(msg);
+      console.error("loadData failed:", e);
     }
-
-    const sceneMap = new Map<number, Scene>();
-    await Promise.all(
-      aoiData.features.map(async (a) => {
-        const { scenes } = await getScenes(a.properties.aoi_id);
-        if (scenes[0]) sceneMap.set(a.properties.aoi_id, scenes[0]);
-      })
-    );
-    setScenesByAoi(sceneMap);
   }, []);
 
   useEffect(() => {
-    loadData().catch(console.error);
+    loadData();
   }, [loadData]);
 
   const refreshDetections = useCallback(async (end?: Date | null) => {
@@ -618,6 +635,22 @@ export default function GlobeDashboard() {
 
   return (
     <div className="globe-container">
+      {loadError && (
+        <div
+          className="auth-error"
+          style={{
+            position: "absolute",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 20,
+            maxWidth: "90%",
+            padding: "0.75rem 1rem",
+          }}
+        >
+          <strong>Data load error:</strong> {loadError}
+        </div>
+      )}
       <div className="globe-toolbar-row">
         <div className="globe-toolbar">
           <button

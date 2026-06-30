@@ -20,13 +20,17 @@ loadRootEnv();
 const cesiumToken =
   process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN || process.env.CESIUM_ION_TOKEN || "";
 
+const demoMode =
+  process.env.NEXT_PUBLIC_DEMO_MODE ??
+  (process.env.VERCEL ? "true" : "true");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  // Standalone is for Docker only; Vercel uses its own output layout.
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
   env: {
-    NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE || "",
+    NEXT_PUBLIC_DEMO_MODE: demoMode,
     NEXT_PUBLIC_CESIUM_ION_TOKEN: cesiumToken,
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080",
   },
 };
 
