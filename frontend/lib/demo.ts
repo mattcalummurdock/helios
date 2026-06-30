@@ -1,13 +1,23 @@
-/** Static demo mode — serves bundled JSON from /demo/data (no backend). */
+/** Static demo mode — bundled JSON compiled into the Next.js build (Vercel-safe). */
 
-import type { AoiFeature, DetectionFeature, FeatureCollection } from "./types";
+import type { Alert, AoiFeature, ChangeEvent, DetectionFeature, FeatureCollection, Scene } from "./types";
 
-export function isDemoMode(): boolean {
-  return process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-}
+import bundledAois from "@/demo-data/aois.json";
+import bundledDetections from "@/demo-data/detections.json";
+import bundledChanges from "@/demo-data/changes.json";
+import bundledAlerts from "@/demo-data/alerts.json";
+import bundledScenes from "@/demo-data/scenes.json";
 
-const cache = new Map<string, unknown>();
 const AOI_STORE_KEY = "helios_demo_aois";
+
+/** Use static demo data when explicitly enabled or when API URL points at localhost (Vercel default). */
+export function isDemoMode(): boolean {
+  const flag = process.env.NEXT_PUBLIC_DEMO_MODE;
+  if (flag === "true") return true;
+  if (flag === "false") return false;
+  const api = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").toLowerCase();
+  return api.includes("localhost") || api.includes("127.0.0.1");
+}
 
 function readAoiStore(): AoiFeature[] | null {
   if (typeof window === "undefined") return null;
@@ -15,7 +25,7 @@ function readAoiStore(): AoiFeature[] | null {
     const raw = localStorage.getItem(AOI_STORE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { features: AoiFeature[] };
-    return parsed.features;
+    return parsed.features?.length ? parsed.features : null;
   } catch {
     return null;
   }
@@ -24,17 +34,6 @@ function readAoiStore(): AoiFeature[] | null {
 function writeAoiStore(features: AoiFeature[]): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(AOI_STORE_KEY, JSON.stringify({ type: "FeatureCollection", features }));
-  cache.set("aois", { type: "FeatureCollection", features });
-}
-
-async function loadDemoJson<T>(name: string): Promise<T> {
-  const hit = cache.get(name);
-  if (hit !== undefined) return hit as T;
-  const res = await fetch(`/demo/data/${name}.json`);
-  if (!res.ok) throw new Error(`Demo data missing: ${name}.json (run export_demo_static.py)`);
-  const data = (await res.json()) as T;
-  cache.set(name, data);
-  return data;
 }
 
 export async function demoAois(): Promise<FeatureCollection<AoiFeature>> {
@@ -42,7 +41,7 @@ export async function demoAois(): Promise<FeatureCollection<AoiFeature>> {
   if (stored) {
     return { type: "FeatureCollection", features: stored };
   }
-  return loadDemoJson<FeatureCollection<AoiFeature>>("aois");
+  return bundledAois as FeatureCollection<AoiFeature>;
 }
 
 export async function demoCreateAoi(body: {
@@ -98,19 +97,19 @@ export async function demoDeactivateAoi(id: number): Promise<{ id: number; monit
 }
 
 export async function demoDetections(): Promise<FeatureCollection<DetectionFeature>> {
-  return loadDemoJson<FeatureCollection<DetectionFeature>>("detections");
+  return bundledDetections as FeatureCollection<DetectionFeature>;
 }
 
 export async function demoChanges() {
-  return loadDemoJson<{ events: import("./types").ChangeEvent[] }>("changes");
+  return bundledChanges as { events: ChangeEvent[] };
 }
 
 export async function demoAlerts() {
-  return loadDemoJson<{ alerts: import("./types").Alert[] }>("alerts");
+  return bundledAlerts as { alerts: Alert[] };
 }
 
 export async function demoScenes(aoiId?: number) {
-  const { scenes } = await loadDemoJson<{ scenes: import("./types").Scene[] }>("scenes");
+  const { scenes } = bundledScenes as { scenes: Scene[] };
   if (aoiId == null) return { scenes };
   return { scenes: scenes.filter((s) => s.aoi_id === aoiId) };
 }

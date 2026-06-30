@@ -2,7 +2,7 @@
 """Export seeded PostGIS demo data + detection images for static Vercel deploy.
 
 Reads from DATABASE_URL_SYNC (default: localhost:5433) and writes:
-  frontend/public/demo/data/*.json
+  frontend/demo-data/*.json          (bundled into Next.js build)
   frontend/public/demo/images/detections/{id}/{crop|gradcam}.png
 
 Usage:
@@ -28,9 +28,8 @@ sys.path.insert(0, str(REPO_ROOT / "shared"))
 from helios_common.geojson import aoi_feature, detection_feature, feature_collection  # noqa: E402
 from helios_common.paths import resolve_detection_asset  # noqa: E402
 
-OUT_ROOT = REPO_ROOT / "frontend" / "public" / "demo"
-DATA_DIR = OUT_ROOT / "data"
-IMG_DIR = OUT_ROOT / "images" / "detections"
+DATA_DIR = REPO_ROOT / "frontend" / "demo-data"
+IMG_DIR = REPO_ROOT / "frontend" / "public" / "demo" / "images" / "detections"
 
 _AOI_SELECT = """
     SELECT a.id, a.name, a.priority::text, a.last_pass_at, a.monitoring_active,
@@ -92,9 +91,8 @@ def main() -> int:
     engine = create_engine(db_url, echo=False)
     Session = sessionmaker(bind=engine)
 
-    print(f"Exporting demo static assets to {OUT_ROOT.relative_to(REPO_ROOT)}/")
-    if DATA_DIR.exists():
-        shutil.rmtree(DATA_DIR)
+    print(f"Exporting demo JSON to {DATA_DIR.relative_to(REPO_ROOT)}/")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     if IMG_DIR.exists():
         shutil.rmtree(IMG_DIR)
 

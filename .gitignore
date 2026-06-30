@@ -57,6 +57,8 @@ out/
 # Runtime data & large/generated assets (not source)
 # =============================================================================
 data/
+!frontend/demo-data/
+!frontend/demo-data/**
 tiles/
 datasets/
 ml/datasets/
