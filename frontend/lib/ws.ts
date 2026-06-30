@@ -1,4 +1,4 @@
-import { ensureAuth, getToken, getWsUrl } from "./auth";
+import { getWsUrl } from "./api-config";
 import { isDemoMode } from "./demo";
 import type { WsEvent } from "./types";
 
@@ -23,17 +23,13 @@ export class HeliosWebSocket {
     if (isDemoMode()) return;
 
     this.closed = false;
-    await ensureAuth();
-    const token = getToken();
-    if (!token) throw new Error("No auth token");
 
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
 
-    const url = `${getWsUrl()}?token=${encodeURIComponent(token)}`;
-    const ws = new WebSocket(url);
+    const ws = new WebSocket(getWsUrl());
     this.ws = ws;
 
     ws.onopen = () => {

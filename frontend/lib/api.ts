@@ -1,8 +1,4 @@
-import {
-  ensureAuth,
-  authHeaders,
-  getApiUrl,
-} from "./auth";
+import { getApiUrl } from "./api-config";
 import {
   demoAlerts,
   demoAois,
@@ -54,14 +50,7 @@ function filterDetections(
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  await ensureAuth();
-  const res = await fetch(`${getApiUrl()}${path}`, {
-    ...init,
-    headers: {
-      ...authHeaders(),
-      ...(init?.headers || {}),
-    },
-  });
+  const res = await fetch(`${getApiUrl()}${path}`, init);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `API error ${res.status}`);
@@ -195,10 +184,7 @@ export async function fetchDetectionImageBlob(
   kind: "gradcam" | "crop" = "gradcam"
 ): Promise<Blob | null> {
   if (isDemoMode()) return demoDetectionImageBlob(detectionId, kind);
-  await ensureAuth();
-  const res = await fetch(`${getApiUrl()}/detections/${detectionId}/${kind}`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${getApiUrl()}/detections/${detectionId}/${kind}`);
   if (!res.ok) return null;
   return res.blob();
 }
@@ -210,10 +196,8 @@ export async function fetchGradCamBlob(detectionId: number): Promise<Blob | null
 
 export async function exportDetections(params: ExportQuery): Promise<Blob> {
   if (isDemoMode()) return exportDemoDetections(params);
-  await ensureAuth();
   const res = await fetch(
-    `${getApiUrl()}/export${queryString(params as Record<string, string | number | undefined | string[]>)}`,
-    { headers: authHeaders() }
+    `${getApiUrl()}/export${queryString(params as Record<string, string | number | undefined | string[]>)}`
   );
   if (!res.ok) {
     throw new Error(`Export failed: ${res.status}`);
