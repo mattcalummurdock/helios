@@ -1,0 +1,112 @@
+{
+  "events": [
+    {
+      "id": 3,
+      "aoi_id": 1,
+      "event_type": "moved",
+      "distance_moved_m": 8581.438,
+      "speed_kmh": 4.290719,
+      "bearing_degrees": 44.5148,
+      "timestamp": "2026-06-29T07:14:56.361316+00:00",
+      "alert_fired": true,
+      "t1": {
+        "lat": 50.41,
+        "lon": 30.45,
+        "class": "vehicle"
+      },
+      "t2": {
+        "lat": 50.464999999999996,
+        "lon": 30.535,
+        "class": "vehicle"
+      }
+    },
+    {
+      "id": 4,
+      "aoi_id": 1,
+      "event_type": "disappeared",
+      "distance_moved_m": null,
+      "speed_kmh": null,
+      "bearing_degrees": null,
+      "timestamp": "2026-06-29T07:14:56.361316+00:00",
+      "alert_fired": true,
+      "t1": {
+        "lat": 50.42,
+        "lon": 30.52,
+        "class": "vehicle"
+      },
+      "t2": null
+    },
+    {
+      "id": 5,
+      "aoi_id": 2,
+      "event_type": "moved",
+      "distance_moved_m": 5737.516,
+      "speed_kmh": 3.8250105,
+      "bearing_degrees": 47.268253,
+      "timestamp": "2026-06-29T07:14:56.361316+00:00",
+      "alert_fired": true,
+      "t1": {
+        "lat": 46.405,
+        "lon": 30.74,
+        "class": "ship"
+      },
+      "t2": {
+        "lat": 46.44,
+        "lon": 30.794999999999998,
+        "class": "ship"
+      }
+    },
+    {
+      "id": 6,
+      "aoi_id": 2,
+      "event_type": "appeared",
+      "distance_moved_m": null,
+      "speed_kmh": null,
+      "bearing_degrees": null,
+      "timestamp": "2026-06-29T07:14:56.361316+00:00",
+      "alert_fired": true,
+      "t1": null,
+      "t2": {
+        "lat": 46.415,
+        "lon": 30.695,
+        "class": "ship"
+      }
+    },
+    {
+      "id": 7,
+      "aoi_id": 3,
+      "event_type": "moved",
+      "distance_moved_m": 1854.9274,
+      "speed_kmh": 1.8549273,
+      "bearing_degrees": 43.992397,
+      "timestamp": "2026-06-29T07:14:56.361316+00:00",
+      "alert_fired": true,
+      "t1": {
+        "lat": 49.92,
+        "lon": 24.78,
+        "class": "aircraft"
+      },
+      "t2": {
+        "lat": 49.932,
+        "lon": 24.798000000000002,
+        "class": "aircraft"
+      }
+    },
+    {
+      "id": 8,
+      "aoi_id": 3,
+      "event_type": "appeared",
+      "distance_moved_m": null,
+      "speed_kmh": null,
+      "bearing_degrees": null,
+      "timestamp": "2026-06-29T07:14:56.361316+00:00",
+      "alert_fired": true,
+      "t1": null,
+      "t2": {
+        "lat": 49.885,
+        "lon": 24.775,
+        "class": "helicopter"
+      }
+    }
+  ]
+}

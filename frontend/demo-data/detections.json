@@ -1,0 +1,577 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 43,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.518,
+              50.422
+            ],
+            [
+              30.522,
+              50.422
+            ],
+            [
+              30.522,
+              50.418
+            ],
+            [
+              30.518,
+              50.418
+            ],
+            [
+              30.518,
+              50.422
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 43,
+        "class": "vehicle",
+        "subclass": "BTR_60",
+        "confidence": 0.79,
+        "lat": 50.42,
+        "lon": 30.52,
+        "heading_degrees": 0.0,
+        "timestamp": "2026-06-29T07:14:56.361316+00:00",
+        "scene_id": 1,
+        "aoi_id": 1,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 42,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.533,
+              50.467
+            ],
+            [
+              30.537,
+              50.467
+            ],
+            [
+              30.537,
+              50.463
+            ],
+            [
+              30.533,
+              50.463
+            ],
+            [
+              30.533,
+              50.467
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 42,
+        "class": "vehicle",
+        "subclass": "T62",
+        "confidence": 0.85,
+        "lat": 50.464999999999996,
+        "lon": 30.535,
+        "heading_degrees": 45.0,
+        "timestamp": "2026-06-29T07:14:56.361316+00:00",
+        "scene_id": 2,
+        "aoi_id": 1,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 47,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              24.773,
+              49.887
+            ],
+            [
+              24.777,
+              49.887
+            ],
+            [
+              24.777,
+              49.883
+            ],
+            [
+              24.773,
+              49.883
+            ],
+            [
+              24.773,
+              49.887
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 47,
+        "class": "helicopter",
+        "subclass": "Mi-8MT",
+        "confidence": 0.77,
+        "lat": 49.885,
+        "lon": 24.775,
+        "heading_degrees": 0.0,
+        "timestamp": "2026-06-29T07:14:56.361316+00:00",
+        "scene_id": 4,
+        "aoi_id": 3,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 46,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              24.796,
+              49.934
+            ],
+            [
+              24.8,
+              49.934
+            ],
+            [
+              24.8,
+              49.93
+            ],
+            [
+              24.796,
+              49.93
+            ],
+            [
+              24.796,
+              49.934
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 46,
+        "class": "aircraft",
+        "subclass": "An-26",
+        "confidence": 0.85,
+        "lat": 49.932,
+        "lon": 24.798000000000002,
+        "heading_degrees": 30.0,
+        "timestamp": "2026-06-29T07:14:56.361316+00:00",
+        "scene_id": 4,
+        "aoi_id": 3,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 45,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.693,
+              46.417
+            ],
+            [
+              30.697,
+              46.417
+            ],
+            [
+              30.697,
+              46.413
+            ],
+            [
+              30.693,
+              46.413
+            ],
+            [
+              30.693,
+              46.417
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 45,
+        "class": "ship",
+        "subclass": "Patrol craft",
+        "confidence": 0.81,
+        "lat": 46.415,
+        "lon": 30.695,
+        "heading_degrees": 0.0,
+        "timestamp": "2026-06-29T07:14:56.361316+00:00",
+        "scene_id": 3,
+        "aoi_id": 2,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 44,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.793,
+              46.442
+            ],
+            [
+              30.797,
+              46.442
+            ],
+            [
+              30.797,
+              46.438
+            ],
+            [
+              30.793,
+              46.438
+            ],
+            [
+              30.793,
+              46.442
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 44,
+        "class": "ship",
+        "subclass": "Ropucha-class LST",
+        "confidence": 0.85,
+        "lat": 46.44,
+        "lon": 30.794999999999998,
+        "heading_degrees": 120.0,
+        "timestamp": "2026-06-29T07:14:56.361316+00:00",
+        "scene_id": 3,
+        "aoi_id": 2,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 41,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.533,
+              50.467
+            ],
+            [
+              30.537,
+              50.467
+            ],
+            [
+              30.537,
+              50.463
+            ],
+            [
+              30.533,
+              50.463
+            ],
+            [
+              30.533,
+              50.467
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 41,
+        "class": "vehicle",
+        "subclass": "T62",
+        "confidence": 0.86,
+        "lat": 50.464999999999996,
+        "lon": 30.535,
+        "heading_degrees": 45.0,
+        "timestamp": "2026-06-29T07:11:14.165142+00:00",
+        "scene_id": 2,
+        "aoi_id": 1,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 40,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.476,
+              50.43
+            ],
+            [
+              30.48,
+              50.43
+            ],
+            [
+              30.48,
+              50.426
+            ],
+            [
+              30.476,
+              50.426
+            ],
+            [
+              30.476,
+              50.43
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 40,
+        "class": "vehicle",
+        "subclass": "T62",
+        "confidence": 0.86,
+        "lat": 50.428,
+        "lon": 30.477999999999998,
+        "heading_degrees": 45.0,
+        "timestamp": "2026-06-29T07:08:16.683802+00:00",
+        "scene_id": 2,
+        "aoi_id": 1,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 39,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              36.348,
+              34.552
+            ],
+            [
+              36.352,
+              34.552
+            ],
+            [
+              36.352,
+              34.548
+            ],
+            [
+              36.348,
+              34.548
+            ],
+            [
+              36.348,
+              34.552
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 39,
+        "class": "vehicle",
+        "subclass": "2S1",
+        "confidence": 0.88,
+        "lat": 34.55,
+        "lon": 36.35,
+        "heading_degrees": 0.0,
+        "timestamp": "2026-06-29T07:04:43.223722+00:00",
+        "scene_id": 1,
+        "aoi_id": 1,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 37,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              24.778,
+              49.922
+            ],
+            [
+              24.782,
+              49.922
+            ],
+            [
+              24.782,
+              49.918
+            ],
+            [
+              24.778,
+              49.918
+            ],
+            [
+              24.778,
+              49.922
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 37,
+        "class": "aircraft",
+        "subclass": "An-26",
+        "confidence": 0.9097413,
+        "lat": 49.92,
+        "lon": 24.78,
+        "heading_degrees": 1.4079559,
+        "timestamp": "2026-06-29T07:04:43.223722+00:00",
+        "scene_id": 4,
+        "aoi_id": 3,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 38,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              24.748,
+              59.432
+            ],
+            [
+              24.752,
+              59.432
+            ],
+            [
+              24.752,
+              59.428
+            ],
+            [
+              24.748,
+              59.428
+            ],
+            [
+              24.748,
+              59.432
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 38,
+        "class": "helicopter",
+        "subclass": "Mi-8MT",
+        "confidence": 0.9185717,
+        "lat": 59.43,
+        "lon": 24.75,
+        "heading_degrees": 72.73417,
+        "timestamp": "2026-06-29T07:04:43.223722+00:00",
+        "scene_id": 4,
+        "aoi_id": 3,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 35,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.448,
+              50.412
+            ],
+            [
+              30.452,
+              50.412
+            ],
+            [
+              30.452,
+              50.408
+            ],
+            [
+              30.448,
+              50.408
+            ],
+            [
+              30.448,
+              50.412
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 35,
+        "class": "vehicle",
+        "subclass": "T62",
+        "confidence": 0.9180461,
+        "lat": 50.41,
+        "lon": 30.45,
+        "heading_degrees": 56.45327,
+        "timestamp": "2026-06-29T07:04:43.223722+00:00",
+        "scene_id": 1,
+        "aoi_id": 1,
+        "satellite_source": "copernicus"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 36,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.738,
+              46.407
+            ],
+            [
+              30.742,
+              46.407
+            ],
+            [
+              30.742,
+              46.403
+            ],
+            [
+              30.738,
+              46.403
+            ],
+            [
+              30.738,
+              46.407
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "detection_id": 36,
+        "class": "ship",
+        "subclass": "Ropucha-class LST",
+        "confidence": 0.87549317,
+        "lat": 46.405,
+        "lon": 30.74,
+        "heading_degrees": 88.12594,
+        "timestamp": "2026-06-29T07:04:43.223722+00:00",
+        "scene_id": 3,
+        "aoi_id": 2,
+        "satellite_source": "copernicus"
+      }
+    }
+  ]
+}

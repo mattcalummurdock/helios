@@ -1,0 +1,206 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.4,
+              50.35
+            ],
+            [
+              30.6,
+              50.35
+            ],
+            [
+              30.6,
+              50.5
+            ],
+            [
+              30.4,
+              50.5
+            ],
+            [
+              30.4,
+              50.35
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "aoi_id": 1,
+        "name": "Test AOI - Kyiv Region",
+        "priority": "high",
+        "last_pass_at": "2026-06-29T09:00:18.411115+00:00",
+        "monitoring_active": true,
+        "last_satellite_source": "copernicus",
+        "last_cloud_cover_pct": 0.05,
+        "active_detection_count": 6
+      },
+      "id": 1
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              30.6,
+              46.4
+            ],
+            [
+              30.8,
+              46.4
+            ],
+            [
+              30.8,
+              46.55
+            ],
+            [
+              30.6,
+              46.55
+            ],
+            [
+              30.6,
+              46.4
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "aoi_id": 2,
+        "name": "Test AOI - Black Sea Port",
+        "priority": "medium",
+        "last_pass_at": "2026-06-29T08:00:03.245672+00:00",
+        "monitoring_active": true,
+        "last_satellite_source": "copernicus",
+        "last_cloud_cover_pct": 0.05,
+        "active_detection_count": 3
+      },
+      "id": 2
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              24.7,
+              49.8
+            ],
+            [
+              24.9,
+              49.8
+            ],
+            [
+              24.9,
+              49.95
+            ],
+            [
+              24.7,
+              49.95
+            ],
+            [
+              24.7,
+              49.8
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "aoi_id": 3,
+        "name": "Demo AOI - Airfield Hub",
+        "priority": "high",
+        "last_pass_at": "2026-06-29T09:00:15.558160+00:00",
+        "monitoring_active": true,
+        "last_satellite_source": "copernicus",
+        "last_cloud_cover_pct": 0.05,
+        "active_detection_count": 4
+      },
+      "id": 3
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              26.333456,
+              48.689745
+            ],
+            [
+              26.348391,
+              48.683936
+            ],
+            [
+              26.325517,
+              48.683907
+            ],
+            [
+              26.333456,
+              48.689745
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "aoi_id": 4,
+        "name": "test",
+        "priority": "medium",
+        "last_pass_at": null,
+        "monitoring_active": false,
+        "last_satellite_source": null,
+        "last_cloud_cover_pct": null,
+        "active_detection_count": 0
+      },
+      "id": 4
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              27.392349,
+              49.144507
+            ],
+            [
+              27.223434,
+              49.070766
+            ],
+            [
+              27.417068,
+              48.959948
+            ],
+            [
+              27.609329,
+              49.048262
+            ],
+            [
+              27.392349,
+              49.144507
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "aoi_id": 5,
+        "name": "area of interest test",
+        "priority": "high",
+        "last_pass_at": null,
+        "monitoring_active": true,
+        "last_satellite_source": null,
+        "last_cloud_cover_pct": null,
+        "active_detection_count": 0
+      },
+      "id": 5
+    }
+  ]
+}

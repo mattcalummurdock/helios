@@ -1,0 +1,102 @@
+{
+  "alerts": [
+    {
+      "id": 8,
+      "aoi_id": 1,
+      "aoi_name": "Test AOI - Kyiv Region",
+      "change_event_id": 3,
+      "alert_type": "movement_threshold",
+      "severity": "critical",
+      "lat": 50.464999999999996,
+      "lon": 30.535,
+      "description": "T62 moved 8581m at bearing 45\u00b0 in Test AOI - Kyiv Region",
+      "acknowledged": false,
+      "acknowledged_by": null,
+      "timestamp": "2026-06-29T08:00:24.599895+00:00"
+    },
+    {
+      "id": 9,
+      "aoi_id": 1,
+      "aoi_name": "Test AOI - Kyiv Region",
+      "change_event_id": 4,
+      "alert_type": "disappearance",
+      "severity": "high",
+      "lat": 50.42,
+      "lon": 30.52,
+      "description": "BTR_60 no longer detected in Test AOI - Kyiv Region",
+      "acknowledged": false,
+      "acknowledged_by": null,
+      "timestamp": "2026-06-29T08:00:24.599895+00:00"
+    },
+    {
+      "id": 10,
+      "aoi_id": 2,
+      "aoi_name": "Test AOI - Black Sea Port",
+      "change_event_id": 5,
+      "alert_type": "movement_threshold",
+      "severity": "high",
+      "lat": 46.44,
+      "lon": 30.794999999999998,
+      "description": "Ropucha-class LST moved 5738m at bearing 47\u00b0 in Test AOI - Black Sea Port",
+      "acknowledged": false,
+      "acknowledged_by": null,
+      "timestamp": "2026-06-29T08:00:24.599895+00:00"
+    },
+    {
+      "id": 11,
+      "aoi_id": 2,
+      "aoi_name": "Test AOI - Black Sea Port",
+      "change_event_id": 6,
+      "alert_type": "new_object",
+      "severity": "medium",
+      "lat": 46.415,
+      "lon": 30.695,
+      "description": "New Patrol craft appeared in Test AOI - Black Sea Port",
+      "acknowledged": false,
+      "acknowledged_by": null,
+      "timestamp": "2026-06-29T08:00:24.599895+00:00"
+    },
+    {
+      "id": 12,
+      "aoi_id": 3,
+      "aoi_name": "Demo AOI - Airfield Hub",
+      "change_event_id": 7,
+      "alert_type": "movement_threshold",
+      "severity": "critical",
+      "lat": 49.932,
+      "lon": 24.798000000000002,
+      "description": "An-26 moved 1855m at bearing 44\u00b0 in Demo AOI - Airfield Hub",
+      "acknowledged": false,
+      "acknowledged_by": null,
+      "timestamp": "2026-06-29T08:00:24.599895+00:00"
+    },
+    {
+      "id": 13,
+      "aoi_id": 3,
+      "aoi_name": "Demo AOI - Airfield Hub",
+      "change_event_id": 8,
+      "alert_type": "new_object",
+      "severity": "medium",
+      "lat": 49.885,
+      "lon": 24.775,
+      "description": "New Mi-8MT appeared in Demo AOI - Airfield Hub",
+      "acknowledged": false,
+      "acknowledged_by": null,
+      "timestamp": "2026-06-29T08:00:24.599895+00:00"
+    },
+    {
+      "id": 14,
+      "aoi_id": 1,
+      "aoi_name": "Test AOI - Kyiv Region",
+      "change_event_id": null,
+      "alert_type": "no_coverage",
+      "severity": "medium",
+      "lat": 50.42499999999999,
+      "lon": 30.499999999999993,
+      "description": "No fresh imagery for Test AOI - Kyiv Region \u2014 revisit window exceeded",
+      "acknowledged": false,
+      "acknowledged_by": null,
+      "timestamp": "2026-06-29T08:00:24.599895+00:00"
+    }
+  ]
+}
