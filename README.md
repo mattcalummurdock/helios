@@ -1,4 +1,4 @@
-# Helios — AI-Based Satellite Image Analysis MVP
+# Helios — AI-Based Satellite Image Analysis MVP 
 
 Phase 1 infrastructure for an autonomous satellite surveillance system: Docker Compose with 10 services, PostGIS schema, Celery/Redis task queues, and GPU-ready Triton inference server.
 
